@@ -166,16 +166,24 @@ function solarSystemLayout(nodes, links) {
 }
 
 export default function App() {
+  const [view, setView] = useState("intro");
+  const [topic, setTopic] = useState("");
+  
   const laidOutNodes = useMemo(() => solarSystemLayout(initialNodes, initialLinks), []);
   const [graphData, setGraphData] = useState({ nodes: laidOutNodes, links: initialLinks });
   const [selectedNode, setSelectedNode] = useState(null);
   const [score, setScore] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
 
+  const handleStartLearning = () => {
+    setView("graph");
+  };
+
   const handleNodeClick = (node) => {
     if (!node.unlocked) return alert("Locked. Finish previous quizzes.");
     setSelectedNode(node);
     setScore(null);
+    setSelectedAnswer(null);
   };
 
   const handleQuizSubmit = () => {
@@ -187,43 +195,108 @@ export default function App() {
   const unlockNodes = (parent, score) => {
     const threshold = 0; // for testing
     
-    // collect child ids
+    // Build a map of which nodes have which parents
+    const nodeParents = {};
+    graphData.nodes.forEach(n => {
+      nodeParents[n.id] = [];
+    });
+    
+    graphData.links.forEach(l => {
+      const sourceId = l.source.id || l.source;
+      const targetId = l.target.id || l.target;
+      if (!nodeParents[targetId].includes(sourceId)) {
+        nodeParents[targetId].push(sourceId);
+      }
+    });
+    
+    // First pass: mark current node as completed
+    const nodesWithCompletion = graphData.nodes.map(n => ({
+      ...n,
+      quiz_completed: n.id === parent.id ? true : n.quiz_completed
+    }));
+    
+    // collect child ids of the current parent
     const childIds = graphData.links
       .filter(l => (l.source.id || l.source) === parent.id)
       .map(l => l.target.id || l.target);
 
-    // clone each node into a new object (drop force-graph's internal props)
-    const updatedNodes = graphData.nodes.map(n => {
+    // Second pass: check which children can be unlocked
+    const updatedNodes = nodesWithCompletion.map(n => {
       const isChild = childIds.includes(n.id);
-      const shouldUnlock = isChild && !n.unlocked && score >= threshold;
-      const isCurrentNode = n.id === parent.id;
+      
+      // Check if ALL parents of this child node are completed
+      let shouldUnlock = false;
+      if (isChild && !n.unlocked && score >= threshold) {
+        const parents = nodeParents[n.id];
+        console.log(`Checking ${n.id}, parents:`, parents);
+        
+        const allParentsCompleted = parents.every(parentId => {
+          const parentNode = nodesWithCompletion.find(node => node.id === parentId);
+          console.log(`  Parent ${parentId} completed:`, parentNode?.quiz_completed);
+          return parentNode && parentNode.quiz_completed;
+        });
+        
+        console.log(`${n.id} all parents completed:`, allParentsCompleted);
+        shouldUnlock = allParentsCompleted;
+      }
       
       return {
         id: n.id,
         label: n.label,
         level: n.level,
         unlocked: shouldUnlock ? true : n.unlocked,
-        quiz_completed: isCurrentNode ? true : n.quiz_completed,
-        fx: n.fx, // preserve fixed positions
+        quiz_completed: n.quiz_completed,
+        fx: n.fx,
         fy: n.fy
       };
     });
 
-    // rebuild links to plain {source, target} so force-graph refreshes positions safely
+    // rebuild links
     const cleanedLinks = graphData.links.map(l => ({
       source: l.source.id || l.source,
       target: l.target.id || l.target,
     }));
 
-    // new object breaks reference chain -> triggers re-render
     setGraphData({
       nodes: updatedNodes,
       links: cleanedLinks,
     });
   };
 
+  if (view === "intro") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full shadow-2xl border border-white/20">
+          <h1 className="text-4xl font-bold text-white mb-2 text-center">
+            Knowledge Graph Explorer
+          </h1>
+          <p className="text-white/80 mb-6 text-center">
+            Enter any topic to generate an interactive learning path
+          </p>
+          <div>
+            <input
+              type="text"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
+              placeholder="e.g., Machine Learning, Quantum Physics..."
+              className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 mb-4"
+            />
+            <button
+              onClick={handleStartLearning}
+              disabled={!topic.trim()}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-lg font-semibold hover:from-cyan-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              Generate Learning Path
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ height: "100vh", width: "100vw" }}>
+    <div style={{ height: "100vh", width: "100vw", position: "relative" }}>
       <ForceGraph2D
         graphData={graphData}
         nodeLabel="label"
@@ -244,7 +317,7 @@ export default function App() {
           const label = node.label;
           const fontSize = 12 / globalScale;
           // Larger nodes for lower levels (level 0 is largest)
-          const nodeRadius = 55 - (node.level * node.level * 3);
+          const nodeRadius = 20 - (node.level * 3);
           ctx.font = `${fontSize}px Sans-Serif`;
           
           // Determine color based on quiz completion and unlock status
@@ -293,6 +366,7 @@ export default function App() {
                       type="radio"
                       name="quiz"
                       value={idx}
+                      checked={selectedAnswer === idx}
                       onChange={() => setSelectedAnswer(idx)}
                     /> {opt}
                   </label>
