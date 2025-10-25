@@ -93,9 +93,6 @@ const quizData = {
 };
 
 function solarSystemLayout(nodes, links) {
-  // Calculate node radius for collision detection
-  const getNodeRadius = (level) => 50 - (level * 6);
-  
   const levelRadius = {
     0: 0,      // Center (sun)
     1: 250,    // First orbit
@@ -104,7 +101,6 @@ function solarSystemLayout(nodes, links) {
     4: 1000    // Fourth orbit
   };
 
-  // Build adjacency list for topological sorting
   const adjacency = {};
   const inDegree = {};
   nodes.forEach(node => {
@@ -119,7 +115,6 @@ function solarSystemLayout(nodes, links) {
     inDegree[targetId]++;
   });
 
-  // Topological sort within each level to determine ordering
   const levelNodes = {};
   nodes.forEach(node => {
     if (!levelNodes[node.level]) {
@@ -128,10 +123,8 @@ function solarSystemLayout(nodes, links) {
     levelNodes[node.level].push(node);
   });
 
-  // Sort nodes within each level by their dependencies
   Object.keys(levelNodes).forEach(level => {
     levelNodes[level].sort((a, b) => {
-      // Sort by number of incoming connections, then by id for consistency
       const aDeps = inDegree[a.id];
       const bDeps = inDegree[b.id];
       if (aDeps !== bDeps) return aDeps - bDeps;
@@ -139,7 +132,6 @@ function solarSystemLayout(nodes, links) {
     });
   });
 
-  // Position nodes
   return nodes.map(node => {
     if (node.level === 0) {
       return {
@@ -153,9 +145,7 @@ function solarSystemLayout(nodes, links) {
     const nodeIndex = nodesAtLevel.indexOf(node);
     const totalNodesAtLevel = nodesAtLevel.length;
     const radius = levelRadius[node.level];
-
-    // Evenly distribute nodes around the circle
-    const angle = (nodeIndex / totalNodesAtLevel) * 2 * Math.PI - Math.PI / 2; // Start at top
+    const angle = (nodeIndex / totalNodesAtLevel) * 2 * Math.PI - Math.PI / 2;
 
     return {
       ...node,
@@ -172,45 +162,17 @@ export default function App() {
   
   const laidOutNodes = useMemo(() => solarSystemLayout(initialNodes, initialLinks), []);
   const [graphData, setGraphData] = useState({ nodes: laidOutNodes, links: initialLinks });
-  const [nodeInfo, setNodeInfo] = useState({}); // Store node content and quizzes
+  const [nodeInfo, setNodeInfo] = useState({});
   const [selectedNode, setSelectedNode] = useState(null);
   const [score, setScore] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
 
-  // Function to generate graph from topic
   const handleStartLearning = async () => {
     if (!topic.trim()) return;
     
     setLoading(true);
     
     try {
-      // TODO: Replace with  actual Vercel backend URL
-      // const response = await fetch('url/api/data', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({ topic: topic })
-      // });
-      // 
-      // const data = await response.json();
-      // 
-      // Expected response format:
-      // {
-      //   nodes: [
-      //     { id: "node1", label: "Topic Name", level: 0, unlocked: true, quiz_completed: false },
-      //     ...
-      //   ],
-      //   links: [
-      //     { source: "node1", target: "node2" },
-      //     ...
-      //   ]
-      // }
-      //
-      // const laidOut = solarSystemLayout(data.nodes, data.links);
-      // setGraphData({ nodes: laidOut, links: data.links });
-      
-      // For now, use hardcoded data
       const laidOut = solarSystemLayout(initialNodes, initialLinks);
       setGraphData({ nodes: laidOut, links: initialLinks });
       setView("graph");
@@ -231,15 +193,24 @@ export default function App() {
   };
 
   const handleQuizSubmit = () => {
-    const newScore = Math.floor(Math.random() * 11);
-    setScore(newScore);
-    unlockNodes(selectedNode, newScore);
+    if (selectedAnswer === null) {
+      alert("Please select an answer!");
+      return;
+    }
+    
+    const currentQuiz = quizData[selectedNode.id];
+    const isCorrect = currentQuiz && selectedAnswer === currentQuiz.answer;
+    
+    setScore(isCorrect ? 10 : 0);
+    
+    if (isCorrect) {
+      unlockNodes(selectedNode, 10);
+    }
   };
 
   const unlockNodes = (parent, score) => {
-    const threshold = 0; // for testing
+    const threshold = 0;
     
-    // Build a map of which nodes have which parents
     const nodeParents = {};
     graphData.nodes.forEach(n => {
       nodeParents[n.id] = [];
@@ -253,34 +224,27 @@ export default function App() {
       }
     });
     
-    // First pass: mark current node as completed
     const nodesWithCompletion = graphData.nodes.map(n => ({
       ...n,
       quiz_completed: n.id === parent.id ? true : n.quiz_completed
     }));
     
-    // collect child ids of the current parent
     const childIds = graphData.links
       .filter(l => (l.source.id || l.source) === parent.id)
       .map(l => l.target.id || l.target);
 
-    // Second pass: check which children can be unlocked
     const updatedNodes = nodesWithCompletion.map(n => {
       const isChild = childIds.includes(n.id);
       
-      // Check if ALL parents of this child node are completed
       let shouldUnlock = false;
       if (isChild && !n.unlocked && score >= threshold) {
         const parents = nodeParents[n.id];
-        console.log(`Checking ${n.id}, parents:`, parents);
         
         const allParentsCompleted = parents.every(parentId => {
           const parentNode = nodesWithCompletion.find(node => node.id === parentId);
-          console.log(`  Parent ${parentId} completed:`, parentNode?.quiz_completed);
           return parentNode && parentNode.quiz_completed;
         });
         
-        console.log(`${n.id} all parents completed:`, allParentsCompleted);
         shouldUnlock = allParentsCompleted;
       }
       
@@ -295,7 +259,6 @@ export default function App() {
       };
     });
 
-    // rebuild links
     const cleanedLinks = graphData.links.map(l => ({
       source: l.source.id || l.source,
       target: l.target.id || l.target,
@@ -312,7 +275,7 @@ export default function App() {
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center p-4">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full shadow-2xl border border-white/20">
           <h1 className="text-4xl font-bold text-white mb-2 text-center">
-            StudySphere
+            Knowledge Graph Explorer
           </h1>
           <p className="text-white/80 mb-6 text-center">
             Enter any topic to generate an interactive learning path!
@@ -328,10 +291,10 @@ export default function App() {
             />
             <button
               onClick={handleStartLearning}
-              disabled={!topic.trim()}
+              disabled={!topic.trim() || loading}
               className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-lg font-semibold hover:from-cyan-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              Generate Learning Path
+              {loading ? "Generating..." : "Generate Learning Path"}
             </button>
           </div>
         </div>
@@ -370,7 +333,7 @@ export default function App() {
         />
         <button
           onClick={handleStartLearning}
-          disabled={!topic.trim()}
+          disabled={!topic.trim() || loading}
           style={{
             padding: "8px 16px",
             borderRadius: "6px",
@@ -381,7 +344,7 @@ export default function App() {
             fontWeight: "600"
           }}
         >
-          Generate
+          {loading ? "..." : "Generate"}
         </button>
       </div>
       <ForceGraph2D
@@ -403,18 +366,16 @@ export default function App() {
         nodeCanvasObject={(node, ctx, globalScale) => {
           const label = node.label;
           const fontSize = 12 / globalScale;
-          // Larger nodes for lower levels (level 0 is largest)
           const nodeRadius = 20 - (node.level * 3);
           ctx.font = `${fontSize}px Sans-Serif`;
           
-          // Determine color based on quiz completion and unlock status
           let fillColor;
           if (node.quiz_completed) {
-            fillColor = "#22C55E"; // Green for completed
+            fillColor = "#22C55E";
           } else if (node.unlocked) {
-            fillColor = "#1A659E"; // Blue for unlocked
+            fillColor = "#1A659E";
           } else {
-            fillColor = "#98A2AB"; // Gray for locked
+            fillColor = "#98A2AB";
           }
           
           ctx.fillStyle = fillColor;
@@ -455,14 +416,48 @@ export default function App() {
                       value={idx}
                       checked={selectedAnswer === idx}
                       onChange={() => setSelectedAnswer(idx)}
+                      disabled={score !== null}
                     /> {opt}
                   </label>
                 </div>
               ))}
             </>
           )}
-          <button onClick={handleQuizSubmit}>Submit Quiz</button>
-          {score !== null && <p>Score: {score}/10</p>}
+          
+          {score === null ? (
+            <button onClick={handleQuizSubmit} style={{ marginTop: "10px" }}>Submit Quiz</button>
+          ) : score === 10 ? (
+            <div style={{ marginTop: "10px" }}>
+              <p style={{ color: "#22C55E", fontWeight: "bold" }}>
+                ✓ Correct! Move on to {
+                  graphData.links
+                    .filter(l => (l.source.id || l.source) === selectedNode.id)
+                    .map(l => {
+                      const targetId = l.target.id || l.target;
+                      const targetNode = graphData.nodes.find(n => n.id === targetId);
+                      return targetNode?.label;
+                    })
+                    .filter(Boolean)
+                    .join(", ") || "the next topics"
+                }
+              </p>
+            </div>
+          ) : (
+            <div style={{ marginTop: "10px" }}>
+              <p style={{ color: "#EF4444", fontWeight: "bold" }}>
+                ✗ Incorrect! Try again.
+              </p>
+              <button 
+                onClick={() => {
+                  setScore(null);
+                  setSelectedAnswer(null);
+                }}
+                style={{ marginTop: "10px" }}
+              >
+                Retry Quiz
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
