@@ -168,15 +168,59 @@ function solarSystemLayout(nodes, links) {
 export default function App() {
   const [view, setView] = useState("intro");
   const [topic, setTopic] = useState("");
+  const [loading, setLoading] = useState(false);
   
   const laidOutNodes = useMemo(() => solarSystemLayout(initialNodes, initialLinks), []);
   const [graphData, setGraphData] = useState({ nodes: laidOutNodes, links: initialLinks });
+  const [nodeInfo, setNodeInfo] = useState({}); // Store node content and quizzes
   const [selectedNode, setSelectedNode] = useState(null);
   const [score, setScore] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
 
-  const handleStartLearning = () => {
-    setView("graph");
+  // Function to generate graph from topic
+  const handleStartLearning = async () => {
+    if (!topic.trim()) return;
+    
+    setLoading(true);
+    
+    try {
+      // TODO: Replace with  actual Vercel backend URL
+      // const response = await fetch('url/api/data', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify({ topic: topic })
+      // });
+      // 
+      // const data = await response.json();
+      // 
+      // Expected response format:
+      // {
+      //   nodes: [
+      //     { id: "node1", label: "Topic Name", level: 0, unlocked: true, quiz_completed: false },
+      //     ...
+      //   ],
+      //   links: [
+      //     { source: "node1", target: "node2" },
+      //     ...
+      //   ]
+      // }
+      //
+      // const laidOut = solarSystemLayout(data.nodes, data.links);
+      // setGraphData({ nodes: laidOut, links: data.links });
+      
+      // For now, use hardcoded data
+      const laidOut = solarSystemLayout(initialNodes, initialLinks);
+      setGraphData({ nodes: laidOut, links: initialLinks });
+      setView("graph");
+      
+    } catch (error) {
+      console.error('Error generating graph:', error);
+      alert('Failed to generate graph. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleNodeClick = (node) => {
@@ -268,10 +312,10 @@ export default function App() {
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center p-4">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full shadow-2xl border border-white/20">
           <h1 className="text-4xl font-bold text-white mb-2 text-center">
-            Knowledge Graph Explorer
+            StudySphere
           </h1>
           <p className="text-white/80 mb-6 text-center">
-            Enter any topic to generate an interactive learning path
+            Enter any topic to generate an interactive learning path!
           </p>
           <div>
             <input
@@ -312,7 +356,7 @@ export default function App() {
           type="text"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
+          onKeyPress={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
           placeholder="Enter new topic..."
           style={{
             padding: "8px 12px",
