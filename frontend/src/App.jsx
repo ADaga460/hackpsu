@@ -278,7 +278,7 @@ export default function App() {
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
+              onKeyPress={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
               placeholder="e.g., Machine Learning, Quantum Physics..."
               className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 mb-4"
             />
@@ -297,6 +297,49 @@ export default function App() {
 
   return (
     <div style={{ height: "100vh", width: "100vw", position: "relative" }}>
+      <div style={{
+        position: "absolute",
+        top: 20,
+        left: 20,
+        zIndex: 10,
+        background: "rgba(17, 17, 17, 0.9)",
+        padding: "12px",
+        borderRadius: "8px",
+        display: "flex",
+        gap: "8px"
+      }}>
+        <input
+          type="text"
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
+          placeholder="Enter new topic..."
+          style={{
+            padding: "8px 12px",
+            borderRadius: "6px",
+            border: "1px solid #444",
+            background: "#222",
+            color: "#fff",
+            outline: "none",
+            width: "200px"
+          }}
+        />
+        <button
+          onClick={handleStartLearning}
+          disabled={!topic.trim()}
+          style={{
+            padding: "8px 16px",
+            borderRadius: "6px",
+            border: "none",
+            background: topic.trim() ? "linear-gradient(to right, #06b6d4, #3b82f6)" : "#444",
+            color: "#fff",
+            cursor: topic.trim() ? "pointer" : "not-allowed",
+            fontWeight: "600"
+          }}
+        >
+          Generate
+        </button>
+      </div>
       <ForceGraph2D
         graphData={graphData}
         nodeLabel="label"
