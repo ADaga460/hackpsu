@@ -1,0 +1,346 @@
+{
+    "nodes": [
+      {
+        "id": "AI",
+        "label": "Artificial Intelligence",
+        "level": 0,
+        "unlocked": true,
+        "quiz_completed": false
+      },
+      {
+        "id": "ML",
+        "label": "Machine Learning",
+        "level": 1,
+        "unlocked": true,
+        "quiz_completed": false
+      },
+      {
+        "id": "Stats",
+        "label": "Statistics & Probability",
+        "level": 1,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "DL",
+        "label": "Deep Learning",
+        "level": 2,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "DS",
+        "label": "Data Structures & Algos",
+        "level": 2,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "Clust",
+        "label": "Clustering & Regressions",
+        "level": 2,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "NN",
+        "label": "Neural Networks",
+        "level": 3,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "CV",
+        "label": "Computer Vision",
+        "level": 3,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "NLP",
+        "label": "Natural Language Processing",
+        "level": 3,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "RL",
+        "label": "Reinforcement Learning",
+        "level": 3,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "GAN",
+        "label": "Generative Adversarial Nets",
+        "level": 4,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "CNN",
+        "label": "Convolutional Networks",
+        "level": 4,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "RNN",
+        "label": "Recurrent Networks",
+        "level": 4,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "Transf",
+        "label": "Transformers (Attention)",
+        "level": 4,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "Agent",
+        "label": "AI Agents & Planning",
+        "level": 4,
+        "unlocked": false,
+        "quiz_completed": false
+      },
+      {
+        "id": "Ethics",
+        "label": "AI Ethics & Governance",
+        "level": 4,
+        "unlocked": false,
+        "quiz_completed": false
+      }
+    ],
+    "links": [
+      { "source": "AI", "target": "ML" },
+      { "source": "AI", "target": "Stats" },
+      { "source": "ML", "target": "DL" },
+      { "source": "Stats", "target": "DL" },
+      { "source": "ML", "target": "DS" },
+      { "source": "DL", "target": "NN" },
+      { "source": "DL", "target": "CV" },
+      { "source": "DL", "target": "NLP" },
+      { "source": "DL", "target": "RL" },
+      { "source": "ML", "target": "Clust" },
+      { "source": "NN", "target": "GAN" },
+      { "source": "CV", "target": "CNN" },
+      { "source": "NLP", "target": "RNN" },
+      { "source": "RNN", "target": "Transf" },
+      { "source": "RL", "target": "Agent" },
+      { "source": "Agent", "target": "Ethics" },
+      { "source": "Transf", "target": "Ethics" },
+      { "source": "GAN", "target": "Ethics" }
+    ],
+    "nodeContent": {
+      "AI": {
+        "content": "Artificial Intelligence (AI) refers to the simulation of human intelligence in machines that are programmed to think and learn. AI encompasses various approaches including rule-based systems, machine learning, and neural networks. The field aims to create systems that can perform tasks that typically require human intelligence, such as visual perception, speech recognition, decision-making, and language translation.",
+        "quiz": {
+          "question": "What is Artificial Intelligence?",
+          "options": [
+            "A system that performs logical reasoning only",
+            "A system that mimics human-like decision making",
+            "A program that runs only on quantum computers",
+            "A database for large-scale analytics"
+          ],
+          "answer": 1
+        }
+      },
+      "ML": {
+        "content": "Machine Learning is a subset of AI that focuses on the development of algorithms and statistical models that enable computers to improve their performance on tasks through experience. Instead of being explicitly programmed, ML systems learn patterns from data. Common applications include spam filtering, recommendation systems, and predictive analytics.",
+        "quiz": {
+          "question": "Which of the following best describes Machine Learning?",
+          "options": [
+            "Manually programmed rule-based systems",
+            "A subset of AI that learns from data",
+            "A branch of physics studying motion",
+            "A graphics rendering technique"
+          ],
+          "answer": 1
+        }
+      },
+      "Stats": {
+        "content": "Statistics and Probability form the mathematical foundation for machine learning and data science. Statistics deals with collecting, analyzing, and interpreting data, while probability theory provides the framework for quantifying uncertainty. These concepts are essential for understanding how machine learning algorithms make predictions and decisions.",
+        "quiz": {
+          "question": "What is the main purpose of statistics in machine learning?",
+          "options": [
+            "To create visual graphics",
+            "To quantify uncertainty and analyze data patterns",
+            "To write computer programs",
+            "To store large datasets"
+          ],
+          "answer": 1
+        }
+      },
+      "DL": {
+        "content": "Deep Learning is a specialized subset of machine learning that uses neural networks with multiple layers (deep neural networks) to learn hierarchical representations of data. Deep learning has revolutionized fields like computer vision, natural language processing, and speech recognition by automatically learning features from raw data without manual feature engineering.",
+        "quiz": {
+          "question": "Deep Learning mainly uses:",
+          "options": [
+            "Linear regression models",
+            "Neural networks with many layers",
+            "Genetic algorithms",
+            "Symbolic logic"
+          ],
+          "answer": 1
+        }
+      },
+      "DS": {
+        "content": "Data Structures and Algorithms are fundamental concepts in computer science that enable efficient data organization and manipulation. In AI and ML, choosing the right data structures (like trees, graphs, hash tables) and algorithms (like sorting, searching, optimization) is crucial for building scalable and performant systems.",
+        "quiz": {
+          "question": "Why are data structures important in machine learning?",
+          "options": [
+            "They make code look prettier",
+            "They enable efficient data organization and processing",
+            "They are only used for storing passwords",
+            "They replace the need for algorithms"
+          ],
+          "answer": 1
+        }
+      },
+      "Clust": {
+        "content": "Clustering and Regression are fundamental machine learning techniques. Clustering is an unsupervised learning method that groups similar data points together without predefined labels. Regression is a supervised learning technique used to predict continuous numerical values based on input features. Both are widely used in data analysis and predictive modeling.",
+        "quiz": {
+          "question": "What is the main difference between clustering and regression?",
+          "options": [
+            "Clustering is supervised, regression is unsupervised",
+            "Clustering groups data, regression predicts continuous values",
+            "They are the same thing",
+            "Clustering only works with images"
+          ],
+          "answer": 1
+        }
+      },
+      "NN": {
+        "content": "Neural Networks are computing systems inspired by biological neural networks in animal brains. They consist of interconnected nodes (neurons) organized in layers. Each connection has a weight that adjusts as learning proceeds. Neural networks excel at recognizing patterns and are the foundation of deep learning.",
+        "quiz": {
+          "question": "What are neural networks inspired by?",
+          "options": [
+            "Computer circuits",
+            "Biological neural networks in brains",
+            "Social networks",
+            "Electrical grids"
+          ],
+          "answer": 1
+        }
+      },
+      "CV": {
+        "content": "Computer Vision is a field of AI that trains computers to interpret and understand visual information from the world. Applications include image recognition, object detection, facial recognition, and autonomous vehicles. Modern computer vision heavily relies on deep learning techniques, particularly convolutional neural networks.",
+        "quiz": {
+          "question": "What is the primary goal of computer vision?",
+          "options": [
+            "To improve human eyesight",
+            "To enable computers to interpret visual information",
+            "To create digital art",
+            "To compress images"
+          ],
+          "answer": 1
+        }
+      },
+      "NLP": {
+        "content": "Natural Language Processing (NLP) is a branch of AI that focuses on the interaction between computers and human language. NLP enables computers to understand, interpret, and generate human language in a valuable way. Applications include machine translation, sentiment analysis, chatbots, and text summarization.",
+        "quiz": {
+          "question": "What does NLP enable computers to do?",
+          "options": [
+            "Process numerical calculations faster",
+            "Understand and generate human language",
+            "Create computer programs",
+            "Manage databases"
+          ],
+          "answer": 1
+        }
+      },
+      "RL": {
+        "content": "Reinforcement Learning is a type of machine learning where an agent learns to make decisions by performing actions in an environment to maximize cumulative reward. Unlike supervised learning, RL learns through trial and error. It's used in robotics, game playing (like AlphaGo), and autonomous systems.",
+        "quiz": {
+          "question": "How does reinforcement learning work?",
+          "options": [
+            "By memorizing all possible scenarios",
+            "By learning through trial and error to maximize rewards",
+            "By copying human behavior exactly",
+            "By using predefined rules only"
+          ],
+          "answer": 1
+        }
+      },
+      "GAN": {
+        "content": "Generative Adversarial Networks (GANs) consist of two neural networks - a generator and a discriminator - that compete against each other. The generator creates fake data while the discriminator tries to distinguish real from fake. This adversarial process results in the generator producing increasingly realistic data. GANs are used for image generation, style transfer, and data augmentation.",
+        "quiz": {
+          "question": "What are the two main components of a GAN?",
+          "options": [
+            "Input and output layers",
+            "Generator and discriminator",
+            "Encoder and decoder",
+            "Teacher and student"
+          ],
+          "answer": 1
+        }
+      },
+      "CNN": {
+        "content": "Convolutional Neural Networks (CNNs) are specialized neural networks designed for processing grid-like data, particularly images. CNNs use convolutional layers that apply filters to detect features like edges, textures, and patterns. They're the backbone of modern computer vision and are used in image classification, object detection, and facial recognition.",
+        "quiz": {
+          "question": "What type of data are CNNs primarily designed for?",
+          "options": [
+            "Text documents",
+            "Images and grid-like data",
+            "Audio signals only",
+            "Time series data"
+          ],
+          "answer": 1
+        }
+      },
+      "RNN": {
+        "content": "Recurrent Neural Networks (RNNs) are designed to work with sequential data by maintaining an internal memory of previous inputs. Unlike feedforward networks, RNNs have connections that loop back, allowing information to persist. They're used for tasks like language modeling, speech recognition, and time series prediction.",
+        "quiz": {
+          "question": "What makes RNNs different from regular neural networks?",
+          "options": [
+            "They have more layers",
+            "They can process sequential data and maintain memory",
+            "They only work with images",
+            "They require less training data"
+          ],
+          "answer": 1
+        }
+      },
+      "Transf": {
+        "content": "Transformers are a neural network architecture that revolutionized NLP by using attention mechanisms to process sequential data in parallel. Unlike RNNs, transformers can capture long-range dependencies efficiently. They power modern language models like GPT and BERT, enabling breakthrough performance in translation, text generation, and understanding.",
+        "quiz": {
+          "question": "What is the key innovation of transformer models?",
+          "options": [
+            "Using larger datasets",
+            "Attention mechanisms for parallel processing",
+            "Eliminating the need for training",
+            "Processing only short sequences"
+          ],
+          "answer": 1
+        }
+      },
+      "Agent": {
+        "content": "AI Agents are autonomous entities that perceive their environment through sensors and act upon it through actuators to achieve specific goals. Agent-based systems use planning algorithms to determine the best sequence of actions. Applications include robotics, game AI, autonomous vehicles, and intelligent assistants.",
+        "quiz": {
+          "question": "What defines an AI agent?",
+          "options": [
+            "A database that stores information",
+            "An autonomous entity that perceives and acts to achieve goals",
+            "A simple if-then program",
+            "A neural network with many layers"
+          ],
+          "answer": 1
+        }
+      },
+      "Ethics": {
+        "content": "AI Ethics and Governance addresses the moral implications and societal impact of artificial intelligence. Key concerns include bias and fairness, privacy, transparency, accountability, and the potential displacement of human workers. Establishing ethical guidelines and governance frameworks is crucial for ensuring AI benefits humanity while minimizing harm.",
+        "quiz": {
+          "question": "Why is AI ethics important?",
+          "options": [
+            "To make AI systems run faster",
+            "To ensure AI benefits humanity and minimizes harm",
+            "To reduce development costs",
+            "To eliminate the need for testing"
+          ],
+          "answer": 1
+        }
+      }
+    }
+  }

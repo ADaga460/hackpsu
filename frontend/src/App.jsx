@@ -1,96 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 
-const initialNodes = [
-  // Level 0
-  { id: "AI", label: "Artificial Intelligence", level: 0, unlocked: true, quiz_completed: false },
-
-  // Level 1: Core Fundamentals
-  { id: "ML", label: "Machine Learning", level: 1, unlocked: true, quiz_completed: false },
-  { id: "Stats", label: "Statistics & Probability", level: 1, unlocked: false, quiz_completed: false },
-
-  // Level 2: Main Branches
-  { id: "DL", label: "Deep Learning", level: 2, unlocked: false, quiz_completed: false },
-  { id: "DS", label: "Data Structures & Algos", level: 2, unlocked: false, quiz_completed: false },
-  { id: "Clust", label: "Clustering & Regressions", level: 2, unlocked: false, quiz_completed: false },
-
-  // Level 3: Specialized Topics
-  { id: "NN", label: "Neural Networks", level: 3, unlocked: false, quiz_completed: false },
-  { id: "CV", label: "Computer Vision", level: 3, unlocked: false, quiz_completed: false },
-  { id: "NLP", label: "Natural Language Processing", level: 3, unlocked: false, quiz_completed: false },
-  { id: "RL", label: "Reinforcement Learning", level: 3, unlocked: false, quiz_completed: false },
-
-  // Level 4: Cutting-Edge & Context
-  { id: "GAN", label: "Generative Adversarial Nets", level: 4, unlocked: false, quiz_completed: false },
-  { id: "CNN", label: "Convolutional Networks", level: 4, unlocked: false, quiz_completed: false },
-  { id: "RNN", label: "Recurrent Networks", level: 4, unlocked: false, quiz_completed: false },
-  { id: "Transf", label: "Transformers (Attention)", level: 4, unlocked: false, quiz_completed: false },
-  { id: "Agent", label: "AI Agents & Planning", level: 4, unlocked: false, quiz_completed: false },
-  { id: "Ethics", label: "AI Ethics & Governance", level: 4, unlocked: false, quiz_completed: false },
-];
-
-const initialLinks = [
-  // --- Level 0 to Level 1 ---
-  { source: "AI", target: "ML" },
-  { source: "AI", target: "Stats" },
-
-  // --- Level 1 to Level 2 ---
-  { source: "ML", target: "DL" },
-  { source: "Stats", target: "DL" }, // DL requires both ML and Stats
-  { source: "ML", target: "DS" },
-
-  // --- Level 2 to Level 3 ---
-  { source: "DL", target: "NN" },
-  { source: "DL", target: "CV" },
-  { source: "DL", target: "NLP" },
-  { source: "DL", target: "RL" },
-  { source: "ML", target: "Clust" }, // Clustering is fundamental ML, not from DL
-
-  // --- Level 3 to Level 4 ---
-  { source: "NN", target: "GAN" },
-  { source: "CV", target: "CNN" },
-  { source: "NLP", target: "RNN" },
-  { source: "RNN", target: "Transf" },
-  { source: "RL", target: "Agent" },
-
-  // --- Ethics connections ---
-  { source: "Agent", target: "Ethics" },
-  { source: "Transf", target: "Ethics" },
-  { source: "GAN", target: "Ethics" },
-];
-
-const quizData = {
-  "AI": {
-    question: "What is Artificial Intelligence?",
-    options: [
-      "A system that performs logical reasoning only",
-      "A system that mimics human-like decision making",
-      "A program that runs only on quantum computers",
-      "A database for large-scale analytics"
-    ],
-    answer: 1
-  },
-  "ML": {
-    question: "Which of the following best describes Machine Learning?",
-    options: [
-      "Manually programmed rule-based systems",
-      "A subset of AI that learns from data",
-      "A branch of physics studying motion",
-      "A graphics rendering technique"
-    ],
-    answer: 1
-  },
-  "DL": {
-    question: "Deep Learning mainly uses:",
-    options: [
-      "Linear regression models",
-      "Neural networks with many layers",
-      "Genetic algorithms",
-      "Symbolic logic"
-    ],
-    answer: 1
-  }
-};
+// Import the JSON data - place graphData.json in the same directory as this file
+// For local development, you can use: import graphDataJson from './graphData.json';
+// Or fetch it from a URL
 
 function solarSystemLayout(nodes, links) {
   const levelRadius = {
@@ -159,13 +72,123 @@ export default function App() {
   const [view, setView] = useState("intro");
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(false);
-  
-  const laidOutNodes = useMemo(() => solarSystemLayout(initialNodes, initialLinks), []);
-  const [graphData, setGraphData] = useState({ nodes: laidOutNodes, links: initialLinks });
-  const [nodeInfo, setNodeInfo] = useState({});
+  const [graphData, setGraphData] = useState({ nodes: [], links: [] });
+  const [nodeContent, setNodeContent] = useState({});
   const [selectedNode, setSelectedNode] = useState(null);
   const [score, setScore] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
+
+  // Load the JSON data on component mount
+  useEffect(() => {
+    const loadGraphData = async () => {
+      try {
+        // Option 1: Fetch from a URL (e.g., if hosted on your server)
+        // const response = await fetch('/graphData.json');
+        // const data = await response.json();
+        
+        // Option 2: For now, we'll use the hardcoded fallback
+        // Replace this with actual fetch when you have the JSON file accessible
+        const data = await fetchGraphDataFallback();
+        
+        const laidOut = solarSystemLayout(data.nodes, data.links);
+        setGraphData({ nodes: laidOut, links: data.links });
+        setNodeContent(data.nodeContent);
+      } catch (error) {
+        console.error('Error loading graph data:', error);
+        alert('Failed to load graph data. Please refresh the page.');
+      }
+    };
+
+    loadGraphData();
+  }, []);
+
+  // Fallback function - replace with actual fetch
+  const fetchGraphDataFallback = async () => {
+    // This simulates loading from JSON
+    // In production, replace this with: const response = await fetch('/graphData.json');
+    console.log("Using fallback graph data");
+    return {
+      nodes: [
+        { id: "AI", label: "Artificial Intelligence", level: 0, unlocked: true, quiz_completed: false },
+        { id: "ML", label: "Machine Learning", level: 1, unlocked: true, quiz_completed: false },
+        { id: "Stats", label: "Statistics & Probability", level: 1, unlocked: false, quiz_completed: false },
+        { id: "DL", label: "Deep Learning", level: 2, unlocked: false, quiz_completed: false },
+        { id: "DS", label: "Data Structures & Algos", level: 2, unlocked: false, quiz_completed: false },
+        { id: "Clust", label: "Clustering & Regressions", level: 2, unlocked: false, quiz_completed: false },
+        { id: "NN", label: "Neural Networks", level: 3, unlocked: false, quiz_completed: false },
+        { id: "CV", label: "Computer Vision", level: 3, unlocked: false, quiz_completed: false },
+        { id: "NLP", label: "Natural Language Processing", level: 3, unlocked: false, quiz_completed: false },
+        { id: "RL", label: "Reinforcement Learning", level: 3, unlocked: false, quiz_completed: false },
+        { id: "GAN", label: "Generative Adversarial Nets", level: 4, unlocked: false, quiz_completed: false },
+        { id: "CNN", label: "Convolutional Networks", level: 4, unlocked: false, quiz_completed: false },
+        { id: "RNN", label: "Recurrent Networks", level: 4, unlocked: false, quiz_completed: false },
+        { id: "Transf", label: "Transformers (Attention)", level: 4, unlocked: false, quiz_completed: false },
+        { id: "Agent", label: "AI Agents & Planning", level: 4, unlocked: false, quiz_completed: false },
+        { id: "Ethics", label: "AI Ethics & Governance", level: 4, unlocked: false, quiz_completed: false },
+      ],
+      links: [
+        { source: "AI", target: "ML" },
+        { source: "AI", target: "Stats" },
+        { source: "ML", target: "DL" },
+        { source: "Stats", target: "DL" },
+        { source: "ML", target: "DS" },
+        { source: "DL", target: "NN" },
+        { source: "DL", target: "CV" },
+        { source: "DL", target: "NLP" },
+        { source: "DL", target: "RL" },
+        { source: "ML", target: "Clust" },
+        { source: "NN", target: "GAN" },
+        { source: "CV", target: "CNN" },
+        { source: "NLP", target: "RNN" },
+        { source: "RNN", target: "Transf" },
+        { source: "RL", target: "Agent" },
+        { source: "Agent", target: "Ethics" },
+        { source: "Transf", target: "Ethics" },
+        { source: "GAN", target: "Ethics" }
+      ],
+      nodeContent: {
+        AI: {
+          content: "Artificial Intelligence (AI) refers to the simulation of human intelligence in machines that are programmed to think and learn. AI encompasses various approaches including rule-based systems, machine learning, and neural networks.",
+          quiz: {
+            question: "What is Artificial Intelligence?",
+            options: [
+              "A system that performs logical reasoning only",
+              "A system that mimics human-like decision making",
+              "A program that runs only on quantum computers",
+              "A database for large-scale analytics"
+            ],
+            answer: 1
+          }
+        },
+        ML: {
+          content: "Machine Learning is a subset of AI that focuses on the development of algorithms and statistical models that enable computers to improve their performance on tasks through experience. Instead of being explicitly programmed, ML systems learn patterns from data.",
+          quiz: {
+            question: "Which of the following best describes Machine Learning?",
+            options: [
+              "Manually programmed rule-based systems",
+              "A subset of AI that learns from data",
+              "A branch of physics studying motion",
+              "A graphics rendering technique"
+            ],
+            answer: 1
+          }
+        },
+        DL: {
+          content: "Deep Learning is a specialized subset of machine learning that uses neural networks with multiple layers (deep neural networks) to learn hierarchical representations of data. Deep learning has revolutionized fields like computer vision and natural language processing.",
+          quiz: {
+            question: "Deep Learning mainly uses:",
+            options: [
+              "Linear regression models",
+              "Neural networks with many layers",
+              "Genetic algorithms",
+              "Symbolic logic"
+            ],
+            answer: 1
+          }
+        }
+      }
+    };
+  };
 
   const handleStartLearning = async () => {
     if (!topic.trim()) return;
@@ -173,8 +196,17 @@ export default function App() {
     setLoading(true);
     
     try {
-      const laidOut = solarSystemLayout(initialNodes, initialLinks);
-      setGraphData({ nodes: laidOut, links: initialLinks });
+      // TODO: When connecting to backend, replace with:
+      // const response = await fetch('https://your-app.vercel.app/api/generate-graph', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ topic: topic })
+      // });
+      // const data = await response.json();
+      // const laidOut = solarSystemLayout(data.nodes, data.links);
+      // setGraphData({ nodes: laidOut, links: data.links });
+      // setNodeContent(data.nodeContent);
+      
       setView("graph");
       
     } catch (error) {
@@ -186,7 +218,7 @@ export default function App() {
   };
 
   const handleNodeClick = (node) => {
-    if (!node.unlocked) return alert("Locked. Finish previous quizzes.");
+    if (!node.unlocked) return alert("🔒 Locked. Finish previous quizzes.");
     setSelectedNode(node);
     setScore(null);
     setSelectedAnswer(null);
@@ -198,7 +230,7 @@ export default function App() {
       return;
     }
     
-    const currentQuiz = quizData[selectedNode.id];
+    const currentQuiz = nodeContent[selectedNode.id]?.quiz;
     const isCorrect = currentQuiz && selectedAnswer === currentQuiz.answer;
     
     setScore(isCorrect ? 10 : 0);
@@ -398,17 +430,19 @@ export default function App() {
             background: "#111",
             color: "#fff",
             borderRadius: 12,
+            maxHeight: "80vh",
+            overflowY: "auto"
           }}
         >
           <h3>{selectedNode.label}</h3>
-          <p>
-            Placeholder info about {selectedNode.label}. Click "Take Quiz" to simulate quiz completion.
+          <p style={{ marginTop: "10px", lineHeight: "1.6" }}>
+            {nodeContent[selectedNode.id]?.content || "Loading content..."}
           </p>
-          {quizData[selectedNode.id] && (
+          {nodeContent[selectedNode.id]?.quiz && (
             <>
-              <p><strong>Quiz:</strong> {quizData[selectedNode.id].question}</p>
-              {quizData[selectedNode.id].options.map((opt, idx) => (
-                <div key={idx}>
+              <p style={{ marginTop: "15px" }}><strong>Quiz:</strong> {nodeContent[selectedNode.id].quiz.question}</p>
+              {nodeContent[selectedNode.id].quiz.options.map((opt, idx) => (
+                <div key={idx} style={{ marginTop: "8px" }}>
                   <label>
                     <input
                       type="radio"
@@ -425,10 +459,10 @@ export default function App() {
           )}
           
           {score === null ? (
-            <button onClick={handleQuizSubmit} style={{ marginTop: "10px" }}>Submit Quiz</button>
+            <button onClick={handleQuizSubmit} style={{ marginTop: "15px", padding: "10px 20px", background: "#3b82f6", border: "none", borderRadius: "6px", color: "#fff", cursor: "pointer", fontWeight: "600" }}>Submit Quiz</button>
           ) : score === 10 ? (
-            <div style={{ marginTop: "10px" }}>
-              <p style={{ color: "#22C55E", fontWeight: "bold" }}>
+            <div style={{ marginTop: "15px", padding: "10px", background: "rgba(34, 197, 94, 0.2)", borderRadius: "6px" }}>
+              <p style={{ color: "#22C55E", fontWeight: "bold", margin: 0 }}>
                 ✓ Correct! Move on to {
                   graphData.links
                     .filter(l => (l.source.id || l.source) === selectedNode.id)
@@ -443,8 +477,8 @@ export default function App() {
               </p>
             </div>
           ) : (
-            <div style={{ marginTop: "10px" }}>
-              <p style={{ color: "#EF4444", fontWeight: "bold" }}>
+            <div style={{ marginTop: "15px" }}>
+              <p style={{ color: "#EF4444", fontWeight: "bold", marginBottom: "10px" }}>
                 ✗ Incorrect! Try again.
               </p>
               <button 
@@ -452,7 +486,7 @@ export default function App() {
                   setScore(null);
                   setSelectedAnswer(null);
                 }}
-                style={{ marginTop: "10px" }}
+                style={{ padding: "10px 20px", background: "#ef4444", border: "none", borderRadius: "6px", color: "#fff", cursor: "pointer", fontWeight: "600" }}
               >
                 Retry Quiz
               </button>
