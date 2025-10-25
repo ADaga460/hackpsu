@@ -99,31 +99,56 @@ const quizData = {
   }
 };
 
-function solarSystemLayout(nodes) {
+function solarSystemLayout(nodes, links) {
   // Calculate node radius for collision detection
   const getNodeRadius = (level) => 50 - (level * 6);
   
   const levelRadius = {
     0: 0,      // Center (sun)
-    1: 250,    // First orbit (increased)
-    2: 500,    // Second orbit (increased)
-    3: 750,    // Third orbit (increased)
-    4: 1000    // Fourth orbit (increased)
+    1: 250,    // First orbit
+    2: 500,    // Second orbit
+    3: 750,    // Third orbit
+    4: 1000    // Fourth orbit
   };
 
-  // Group nodes by level
-  const nodesByLevel = {};
+  // Build adjacency list for topological sorting
+  const adjacency = {};
+  const inDegree = {};
   nodes.forEach(node => {
-    if (!nodesByLevel[node.level]) {
-      nodesByLevel[node.level] = [];
+    adjacency[node.id] = [];
+    inDegree[node.id] = 0;
+  });
+  
+  links.forEach(link => {
+    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+    adjacency[sourceId].push(targetId);
+    inDegree[targetId]++;
+  });
+
+  // Topological sort within each level to determine ordering
+  const levelNodes = {};
+  nodes.forEach(node => {
+    if (!levelNodes[node.level]) {
+      levelNodes[node.level] = [];
     }
-    nodesByLevel[node.level].push(node);
+    levelNodes[node.level].push(node);
+  });
+
+  // Sort nodes within each level by their dependencies
+  Object.keys(levelNodes).forEach(level => {
+    levelNodes[level].sort((a, b) => {
+      // Sort by number of incoming connections, then by id for consistency
+      const aDeps = inDegree[a.id];
+      const bDeps = inDegree[b.id];
+      if (aDeps !== bDeps) return aDeps - bDeps;
+      return a.id.localeCompare(b.id);
+    });
   });
 
   // Position nodes
   return nodes.map(node => {
     if (node.level === 0) {
-      // Center node
       return {
         ...node,
         fx: 0,
@@ -131,32 +156,13 @@ function solarSystemLayout(nodes) {
       };
     }
 
-    // Get all nodes at this level
-    const levelNodes = nodesByLevel[node.level];
-    const nodeIndex = levelNodes.indexOf(node);
-    const totalNodesAtLevel = levelNodes.length;
+    const nodesAtLevel = levelNodes[node.level];
+    const nodeIndex = nodesAtLevel.indexOf(node);
+    const totalNodesAtLevel = nodesAtLevel.length;
     const radius = levelRadius[node.level];
-    const nodeRadius = getNodeRadius(node.level);
 
-    // Calculate minimum angular spacing to prevent overlap
-    // Arc length = radius * angle, need at least 2 * nodeRadius + padding
-    const minArcLength = (nodeRadius * 2) + 40; // 40px padding between nodes
-    const minAngle = minArcLength / radius;
-    
-    // Use the larger of: evenly distributed or minimum spacing needed
-    const evenAngle = (2 * Math.PI) / totalNodesAtLevel;
-    const angleSpacing = Math.max(evenAngle, minAngle);
-    
-    // If we need more space than available, increase the spacing
-    const totalNeededAngle = angleSpacing * totalNodesAtLevel;
-    const scale = totalNeededAngle > (2 * Math.PI) ? totalNeededAngle / (2 * Math.PI) : 1;
-    
-    // Calculate angle with proper spacing
-    const min = -30;
-    const max = 30;
-    const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
-
-    const angle = (nodeIndex * angleSpacing) + randomNumber / scale;
+    // Evenly distribute nodes around the circle
+    const angle = (nodeIndex / totalNodesAtLevel) * 2 * Math.PI - Math.PI / 2; // Start at top
 
     return {
       ...node,
@@ -167,7 +173,7 @@ function solarSystemLayout(nodes) {
 }
 
 export default function App() {
-  const laidOutNodes = useMemo(() => solarSystemLayout(initialNodes), []);
+  const laidOutNodes = useMemo(() => solarSystemLayout(initialNodes, initialLinks), []);
   const [graphData, setGraphData] = useState({ nodes: laidOutNodes, links: initialLinks });
   const [selectedNode, setSelectedNode] = useState(null);
   const [score, setScore] = useState(null);
@@ -231,6 +237,10 @@ export default function App() {
         nodeAutoColorBy={n => (n.unlocked ? "unlocked" : "locked")}
         cooldownTicks={1}
         d3VelocityDecay={4.75}
+        linkWidth={3}
+        linkColor={() => "#4A5568"}
+        linkDirectionalParticles={2}
+        linkDirectionalParticleWidth={2}
         nodeCanvasObject={(node, ctx, globalScale) => {
           const label = node.label;
           const fontSize = 12 / globalScale;
@@ -256,6 +266,7 @@ export default function App() {
         }}
         onNodeClick={handleNodeClick}
       />
+
       {selectedNode && (
         <div
           style={{
