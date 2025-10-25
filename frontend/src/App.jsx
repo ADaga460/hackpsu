@@ -1,32 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 
 const initialNodes = [
   // Level 0
-  { id: "AI", label: "Artificial Intelligence", level: 0, unlocked: true },
+  { id: "AI", label: "Artificial Intelligence", level: 0, unlocked: true, quiz_completed: false },
 
   // Level 1: Core Fundamentals
-  { id: "ML", label: "Machine Learning", level: 1, unlocked: true },
-  { id: "Stats", label: "Statistics & Probability", level: 1, unlocked: false },
+  { id: "ML", label: "Machine Learning", level: 1, unlocked: true, quiz_completed: false },
+  { id: "Stats", label: "Statistics & Probability", level: 1, unlocked: false, quiz_completed: false },
 
   // Level 2: Main Branches
-  { id: "DL", label: "Deep Learning", level: 2, unlocked: false },
-  { id: "CV", label: "Computer Vision", level: 2, unlocked: false },
-  { id: "NLP", label: "Natural Language Processing", level: 2, unlocked: false },
-  { id: "RL", label: "Reinforcement Learning", level: 2, unlocked: false },
-  { id: "DS", label: "Data Structures & Algos", level: 2, unlocked: false },
+  { id: "DL", label: "Deep Learning", level: 2, unlocked: false, quiz_completed: false },
+  { id: "CV", label: "Computer Vision", level: 2, unlocked: false, quiz_completed: false },
+  { id: "NLP", label: "Natural Language Processing", level: 2, unlocked: false, quiz_completed: false },
+  { id: "RL", label: "Reinforcement Learning", level: 2, unlocked: false, quiz_completed: false },
+  { id: "DS", label: "Data Structures & Algos", level: 2, unlocked: false, quiz_completed: false },
 
   // Level 3: Specialized Topics
-  { id: "NN", label: "Neural Networks", level: 3, unlocked: false },
-  { id: "CNN", label: "Convolutional Networks", level: 3, unlocked: false },
-  { id: "RNN", label: "Recurrent Networks", level: 3, unlocked: false },
-  { id: "GAN", label: "Generative Adversarial Nets", level: 3, unlocked: false },
-  { id: "Clust", label: "Clustering & Regressions", level: 3, unlocked: false },
+  { id: "NN", label: "Neural Networks", level: 3, unlocked: false, quiz_completed: false },
+  { id: "CNN", label: "Convolutional Networks", level: 3, unlocked: false, quiz_completed: false },
+  { id: "RNN", label: "Recurrent Networks", level: 3, unlocked: false, quiz_completed: false },
+  { id: "GAN", label: "Generative Adversarial Nets", level: 3, unlocked: false, quiz_completed: false },
+  { id: "Clust", label: "Clustering & Regressions", level: 3, unlocked: false, quiz_completed: false },
 
   // Level 4: Cutting-Edge & Context
-  { id: "Transf", label: "Transformers (Attention)", level: 4, unlocked: false },
-  { id: "Agent", label: "AI Agents & Planning", level: 4, unlocked: false },
-  { id: "Ethics", label: "AI Ethics & Governance", level: 4, unlocked: false },
+  { id: "Transf", label: "Transformers (Attention)", level: 4, unlocked: false, quiz_completed: false },
+  { id: "Agent", label: "AI Agents & Planning", level: 4, unlocked: false, quiz_completed: false },
+  { id: "Ethics", label: "AI Ethics & Governance", level: 4, unlocked: false, quiz_completed: false },
 ];
 
 const initialLinks = [
@@ -67,7 +67,7 @@ const initialLinks = [
 ];
 
 const quizData = {
-  AI: {
+  "AI": {
     question: "What is Artificial Intelligence?",
     options: [
       "A system that performs logical reasoning only",
@@ -77,7 +77,7 @@ const quizData = {
     ],
     answer: 1
   },
-  ML: {
+  "ML": {
     question: "Which of the following best describes Machine Learning?",
     options: [
       "Manually programmed rule-based systems",
@@ -87,7 +87,7 @@ const quizData = {
     ],
     answer: 1
   },
-  DL: {
+  "DL": {
     question: "Deep Learning mainly uses:",
     options: [
       "Linear regression models",
@@ -97,14 +97,64 @@ const quizData = {
     ],
     answer: 1
   }
-  // Add more nodes as needed
 };
 
+function solarSystemLayout(nodes) {
+  const levelRadius = {
+    0: 0,      // Center (sun)
+    1: 200,    // First orbit
+    2: 400,    // Second orbit
+    3: 600,    // Third orbit
+    4: 800     // Fourth orbit
+  };
+
+  // Group nodes by level
+  const nodesByLevel = {};
+  nodes.forEach(node => {
+    if (!nodesByLevel[node.level]) {
+      nodesByLevel[node.level] = [];
+    }
+    nodesByLevel[node.level].push(node);
+  });
+
+  // Position nodes
+  return nodes.map(node => {
+    if (node.level === 0) {
+      // Center node
+      return {
+        ...node,
+        fx: 0,
+        fy: 0
+      };
+    }
+
+    // Get all nodes at this level
+    const levelNodes = nodesByLevel[node.level];
+    const nodeIndex = levelNodes.indexOf(node);
+    const totalNodesAtLevel = levelNodes.length;
+
+    // Distribute evenly around the circle
+    const min = -30;
+    const max = 30;
+    const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+
+    const angle = (nodeIndex / totalNodesAtLevel) * 2 * Math.PI + randomNumber;
+    const radius = levelRadius[node.level];
+
+    return {
+      ...node,
+      fx: radius * Math.cos(angle),
+      fy: radius * Math.sin(angle)
+    };
+  });
+}
 
 export default function App() {
-  const [graphData, setGraphData] = useState({ nodes: initialNodes, links: initialLinks });
+  const laidOutNodes = useMemo(() => solarSystemLayout(initialNodes), []);
+  const [graphData, setGraphData] = useState({ nodes: laidOutNodes, links: initialLinks });
   const [selectedNode, setSelectedNode] = useState(null);
   const [score, setScore] = useState(null);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
 
   const handleNodeClick = (node) => {
     if (!node.unlocked) return alert("Locked. Finish previous quizzes.");
@@ -112,19 +162,15 @@ export default function App() {
     setScore(null);
   };
 
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
-
   const handleQuizSubmit = () => {
-    const correct = selectedAnswer === quizData[selectedNode.id]?.answer;
-    const newScore = correct ? 10 : Math.floor(Math.random() * 9);
+    const newScore = Math.floor(Math.random() * 11);
     setScore(newScore);
     unlockNodes(selectedNode, newScore);
   };
-  
 
   const unlockNodes = (parent, score) => {
-    //const threshold = parent.level === 0 ? 8 : 9;
-    const threshold = 0;; // for testing
+    const threshold = 0; // for testing
+    
     // collect child ids
     const childIds = graphData.links
       .filter(l => (l.source.id || l.source) === parent.id)
@@ -134,11 +180,16 @@ export default function App() {
     const updatedNodes = graphData.nodes.map(n => {
       const isChild = childIds.includes(n.id);
       const shouldUnlock = isChild && !n.unlocked && score >= threshold;
+      const isCurrentNode = n.id === parent.id;
+      
       return {
         id: n.id,
         label: n.label,
         level: n.level,
-        unlocked: shouldUnlock ? true : n.unlocked, // update flag
+        unlocked: shouldUnlock ? true : n.unlocked,
+        quiz_completed: isCurrentNode ? true : n.quiz_completed,
+        fx: n.fx, // preserve fixed positions
+        fy: n.fy
       };
     });
 
@@ -155,22 +206,36 @@ export default function App() {
     });
   };
 
-
   return (
     <div style={{ height: "100vh", width: "100vw" }}>
       <ForceGraph2D
         graphData={graphData}
         nodeLabel="label"
         nodeAutoColorBy={n => (n.unlocked ? "unlocked" : "locked")}
+        cooldownTicks={1}
+        d3VelocityDecay={4.75}
         nodeCanvasObject={(node, ctx, globalScale) => {
           const label = node.label;
           const fontSize = 12 / globalScale;
+          // Larger nodes for lower levels (level 0 is largest)
+          const nodeRadius = 50 - (node.level * 6);
           ctx.font = `${fontSize}px Sans-Serif`;
-          ctx.fillStyle = node.unlocked ? "#1A659E" : "#98A2AB";
+          
+          // Determine color based on quiz completion and unlock status
+          let fillColor;
+          if (node.quiz_completed) {
+            fillColor = "#22C55E"; // Green for completed
+          } else if (node.unlocked) {
+            fillColor = "#1A659E"; // Blue for unlocked
+          } else {
+            fillColor = "#98A2AB"; // Gray for locked
+          }
+          
+          ctx.fillStyle = fillColor;
           ctx.beginPath();
-          ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI, false);
+          ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
           ctx.fill();
-          ctx.fillText(label, node.x + 8, node.y + 4);
+          ctx.fillText(label, node.x + nodeRadius + 2, node.y + 4);
         }}
         onNodeClick={handleNodeClick}
       />
