@@ -11,59 +11,52 @@ const initialNodes = [
 
   // Level 2: Main Branches
   { id: "DL", label: "Deep Learning", level: 2, unlocked: false, quiz_completed: false },
-  { id: "CV", label: "Computer Vision", level: 2, unlocked: false, quiz_completed: false },
-  { id: "NLP", label: "Natural Language Processing", level: 2, unlocked: false, quiz_completed: false },
-  { id: "RL", label: "Reinforcement Learning", level: 2, unlocked: false, quiz_completed: false },
   { id: "DS", label: "Data Structures & Algos", level: 2, unlocked: false, quiz_completed: false },
+  { id: "Clust", label: "Clustering & Regressions", level: 2, unlocked: false, quiz_completed: false },
 
   // Level 3: Specialized Topics
   { id: "NN", label: "Neural Networks", level: 3, unlocked: false, quiz_completed: false },
-  { id: "CNN", label: "Convolutional Networks", level: 3, unlocked: false, quiz_completed: false },
-  { id: "RNN", label: "Recurrent Networks", level: 3, unlocked: false, quiz_completed: false },
-  { id: "GAN", label: "Generative Adversarial Nets", level: 3, unlocked: false, quiz_completed: false },
-  { id: "Clust", label: "Clustering & Regressions", level: 3, unlocked: false, quiz_completed: false },
+  { id: "CV", label: "Computer Vision", level: 3, unlocked: false, quiz_completed: false },
+  { id: "NLP", label: "Natural Language Processing", level: 3, unlocked: false, quiz_completed: false },
+  { id: "RL", label: "Reinforcement Learning", level: 3, unlocked: false, quiz_completed: false },
 
   // Level 4: Cutting-Edge & Context
+  { id: "GAN", label: "Generative Adversarial Nets", level: 4, unlocked: false, quiz_completed: false },
+  { id: "CNN", label: "Convolutional Networks", level: 4, unlocked: false, quiz_completed: false },
+  { id: "RNN", label: "Recurrent Networks", level: 4, unlocked: false, quiz_completed: false },
   { id: "Transf", label: "Transformers (Attention)", level: 4, unlocked: false, quiz_completed: false },
   { id: "Agent", label: "AI Agents & Planning", level: 4, unlocked: false, quiz_completed: false },
   { id: "Ethics", label: "AI Ethics & Governance", level: 4, unlocked: false, quiz_completed: false },
 ];
 
 const initialLinks = [
-  // --- Core Path ---
+  // --- Level 0 to Level 1 ---
   { source: "AI", target: "ML" },
   { source: "AI", target: "Stats" },
-  { source: "AI", target: "DS" },
 
-  // --- Core ML to Deep Learning (Dual Requirement) ---
+  // --- Level 1 to Level 2 ---
   { source: "ML", target: "DL" },
-  { source: "Stats", target: "DL" }, // DL requires Stat foundation
+  { source: "Stats", target: "DL" }, // DL requires both ML and Stats
+  { source: "ML", target: "DS" },
 
-  // --- ML Fundamentals ---
-  { source: "ML", target: "Clust" },
-
-  // --- Deep Learning Core & Advanced ---
+  // --- Level 2 to Level 3 ---
   { source: "DL", target: "NN" },
-  { source: "NN", target: "GAN" },
-
-  // --- Applications ---
   { source: "DL", target: "CV" },
   { source: "DL", target: "NLP" },
-  { source: "DL", target: "RL" }, // RL needs DL foundation
+  { source: "DL", target: "RL" },
+  { source: "ML", target: "Clust" }, // Clustering is fundamental ML, not from DL
 
-  // --- Computer Vision Track ---
+  // --- Level 3 to Level 4 ---
+  { source: "NN", target: "GAN" },
   { source: "CV", target: "CNN" },
-
-  // --- NLP Track ---
   { source: "NLP", target: "RNN" },
-  { source: "RNN", target: "Transf" }, // SOTA NLP
-
-  // --- Reinforcement Learning Track ---
+  { source: "RNN", target: "Transf" },
   { source: "RL", target: "Agent" },
 
-  // --- Contextual Nodes ---
+  // --- Ethics connections ---
   { source: "Agent", target: "Ethics" },
   { source: "Transf", target: "Ethics" },
+  { source: "GAN", target: "Ethics" },
 ];
 
 const quizData = {
@@ -241,11 +234,17 @@ export default function App() {
         linkColor={() => "#4A5568"}
         linkDirectionalParticles={2}
         linkDirectionalParticleWidth={2}
+        nodeRelSize={10}
+        nodeVal={node => {
+          const nodeRadius = 50 - (node.level * 6);
+          return nodeRadius;
+        }}
+        nodeCanvasObjectMode={() => 'replace'}
         nodeCanvasObject={(node, ctx, globalScale) => {
           const label = node.label;
           const fontSize = 12 / globalScale;
           // Larger nodes for lower levels (level 0 is largest)
-          const nodeRadius = 20 - (node.level * 3);
+          const nodeRadius = 55 - (node.level * node.level * 3);
           ctx.font = `${fontSize}px Sans-Serif`;
           
           // Determine color based on quiz completion and unlock status
