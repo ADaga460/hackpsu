@@ -100,12 +100,15 @@ const quizData = {
 };
 
 function solarSystemLayout(nodes) {
+  // Calculate node radius for collision detection
+  const getNodeRadius = (level) => 50 - (level * 6);
+  
   const levelRadius = {
     0: 0,      // Center (sun)
-    1: 200,    // First orbit
-    2: 400,    // Second orbit
-    3: 600,    // Third orbit
-    4: 800     // Fourth orbit
+    1: 250,    // First orbit (increased)
+    2: 500,    // Second orbit (increased)
+    3: 750,    // Third orbit (increased)
+    4: 1000    // Fourth orbit (increased)
   };
 
   // Group nodes by level
@@ -132,14 +135,28 @@ function solarSystemLayout(nodes) {
     const levelNodes = nodesByLevel[node.level];
     const nodeIndex = levelNodes.indexOf(node);
     const totalNodesAtLevel = levelNodes.length;
+    const radius = levelRadius[node.level];
+    const nodeRadius = getNodeRadius(node.level);
 
-    // Distribute evenly around the circle
+    // Calculate minimum angular spacing to prevent overlap
+    // Arc length = radius * angle, need at least 2 * nodeRadius + padding
+    const minArcLength = (nodeRadius * 2) + 40; // 40px padding between nodes
+    const minAngle = minArcLength / radius;
+    
+    // Use the larger of: evenly distributed or minimum spacing needed
+    const evenAngle = (2 * Math.PI) / totalNodesAtLevel;
+    const angleSpacing = Math.max(evenAngle, minAngle);
+    
+    // If we need more space than available, increase the spacing
+    const totalNeededAngle = angleSpacing * totalNodesAtLevel;
+    const scale = totalNeededAngle > (2 * Math.PI) ? totalNeededAngle / (2 * Math.PI) : 1;
+    
+    // Calculate angle with proper spacing
     const min = -30;
     const max = 30;
     const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
 
-    const angle = (nodeIndex / totalNodesAtLevel) * 2 * Math.PI + randomNumber;
-    const radius = levelRadius[node.level];
+    const angle = (nodeIndex * angleSpacing) + randomNumber / scale;
 
     return {
       ...node,
@@ -218,7 +235,7 @@ export default function App() {
           const label = node.label;
           const fontSize = 12 / globalScale;
           // Larger nodes for lower levels (level 0 is largest)
-          const nodeRadius = 50 - (node.level * 6);
+          const nodeRadius = 20 - (node.level * 3);
           ctx.font = `${fontSize}px Sans-Serif`;
           
           // Determine color based on quiz completion and unlock status
