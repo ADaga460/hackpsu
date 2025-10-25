@@ -2,16 +2,68 @@ import React, { useState } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 
 const initialNodes = [
+  // Level 0
   { id: "AI", label: "Artificial Intelligence", level: 0, unlocked: true },
+  
+  // Level 1: Core Fundamentals
   { id: "ML", label: "Machine Learning", level: 1, unlocked: true },
+  { id: "Stats", label: "Statistics & Probability", level: 1, unlocked: false },
+
+  // Level 2: Main Branches
   { id: "DL", label: "Deep Learning", level: 2, unlocked: false },
+  { id: "CV", label: "Computer Vision", level: 2, unlocked: false },
   { id: "NLP", label: "Natural Language Processing", level: 2, unlocked: false },
+  { id: "RL", label: "Reinforcement Learning", level: 2, unlocked: false },
+  { id: "DS", label: "Data Structures & Algos", level: 2, unlocked: false },
+
+  // Level 3: Specialized Topics
+  { id: "NN", label: "Neural Networks", level: 3, unlocked: false },
+  { id: "CNN", label: "Convolutional Networks", level: 3, unlocked: false },
+  { id: "RNN", label: "Recurrent Networks", level: 3, unlocked: false },
+  { id: "GAN", label: "Generative Adversarial Nets", level: 3, unlocked: false },
+  { id: "Clust", label: "Clustering & Regressions", level: 3, unlocked: false },
+
+  // Level 4: Cutting-Edge & Context
+  { id: "Transf", label: "Transformers (Attention)", level: 4, unlocked: false },
+  { id: "Agent", label: "AI Agents & Planning", level: 4, unlocked: false },
+  { id: "Ethics", label: "AI Ethics & Governance", level: 4, unlocked: false },
 ];
 
 const initialLinks = [
+  // --- Core Path ---
   { source: "AI", target: "ML" },
-  { source: "ML", target: "DL" },
-  { source: "ML", target: "NLP" },
+  { source: "AI", target: "Stats" }, 
+  { source: "AI", target: "DS" },
+
+  // --- Core ML to Deep Learning (Dual Requirement) ---
+  { source: "ML", target: "DL" }, 
+  { source: "Stats", target: "DL" }, // DL requires Stat foundation
+
+  // --- ML Fundamentals ---
+  { source: "ML", target: "Clust" },
+
+  // --- Deep Learning Core & Advanced ---
+  { source: "DL", target: "NN" },
+  { source: "NN", target: "GAN" },
+
+  // --- Applications ---
+  { source: "DL", target: "CV" },
+  { source: "DL", target: "NLP" },
+  { source: "DL", target: "RL" }, // RL needs DL foundation
+
+  // --- Computer Vision Track ---
+  { source: "CV", target: "CNN" },
+  
+  // --- NLP Track ---
+  { source: "NLP", target: "RNN" },
+  { source: "RNN", target: "Transf" }, // SOTA NLP
+
+  // --- Reinforcement Learning Track ---
+  { source: "RL", target: "Agent" },
+
+  // --- Contextual Nodes ---
+  { source: "Agent", target: "Ethics" },
+  { source: "Transf", target: "Ethics" },
 ];
 
 export default function App() {
