@@ -4,7 +4,7 @@ import ForceGraph2D from "react-force-graph-2d";
 const initialNodes = [
   // Level 0
   { id: "AI", label: "Artificial Intelligence", level: 0, unlocked: true },
-  
+
   // Level 1: Core Fundamentals
   { id: "ML", label: "Machine Learning", level: 1, unlocked: true },
   { id: "Stats", label: "Statistics & Probability", level: 1, unlocked: false },
@@ -32,11 +32,11 @@ const initialNodes = [
 const initialLinks = [
   // --- Core Path ---
   { source: "AI", target: "ML" },
-  { source: "AI", target: "Stats" }, 
+  { source: "AI", target: "Stats" },
   { source: "AI", target: "DS" },
 
   // --- Core ML to Deep Learning (Dual Requirement) ---
-  { source: "ML", target: "DL" }, 
+  { source: "ML", target: "DL" },
   { source: "Stats", target: "DL" }, // DL requires Stat foundation
 
   // --- ML Fundamentals ---
@@ -53,7 +53,7 @@ const initialLinks = [
 
   // --- Computer Vision Track ---
   { source: "CV", target: "CNN" },
-  
+
   // --- NLP Track ---
   { source: "NLP", target: "RNN" },
   { source: "RNN", target: "Transf" }, // SOTA NLP
@@ -66,6 +66,41 @@ const initialLinks = [
   { source: "Transf", target: "Ethics" },
 ];
 
+const quizData = {
+  AI: {
+    question: "What is Artificial Intelligence?",
+    options: [
+      "A system that performs logical reasoning only",
+      "A system that mimics human-like decision making",
+      "A program that runs only on quantum computers",
+      "A database for large-scale analytics"
+    ],
+    answer: 1
+  },
+  ML: {
+    question: "Which of the following best describes Machine Learning?",
+    options: [
+      "Manually programmed rule-based systems",
+      "A subset of AI that learns from data",
+      "A branch of physics studying motion",
+      "A graphics rendering technique"
+    ],
+    answer: 1
+  },
+  DL: {
+    question: "Deep Learning mainly uses:",
+    options: [
+      "Linear regression models",
+      "Neural networks with many layers",
+      "Genetic algorithms",
+      "Symbolic logic"
+    ],
+    answer: 1
+  }
+  // Add more nodes as needed
+};
+
+
 export default function App() {
   const [graphData, setGraphData] = useState({ nodes: initialNodes, links: initialLinks });
   const [selectedNode, setSelectedNode] = useState(null);
@@ -77,20 +112,24 @@ export default function App() {
     setScore(null);
   };
 
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+
   const handleQuizSubmit = () => {
-    const newScore = Math.floor(Math.random() * 11);
+    const correct = selectedAnswer === quizData[selectedNode.id]?.answer;
+    const newScore = correct ? 10 : Math.floor(Math.random() * 9);
     setScore(newScore);
     unlockNodes(selectedNode, newScore);
   };
+  
 
   const unlockNodes = (parent, score) => {
     //const threshold = parent.level === 0 ? 8 : 9;
-    const threshold  = 0;; // for testing
+    const threshold = 0;; // for testing
     // collect child ids
     const childIds = graphData.links
       .filter(l => (l.source.id || l.source) === parent.id)
       .map(l => l.target.id || l.target);
-  
+
     // clone each node into a new object (drop force-graph's internal props)
     const updatedNodes = graphData.nodes.map(n => {
       const isChild = childIds.includes(n.id);
@@ -102,20 +141,20 @@ export default function App() {
         unlocked: shouldUnlock ? true : n.unlocked, // update flag
       };
     });
-  
+
     // rebuild links to plain {source, target} so force-graph refreshes positions safely
     const cleanedLinks = graphData.links.map(l => ({
       source: l.source.id || l.source,
       target: l.target.id || l.target,
     }));
-  
+
     // new object breaks reference chain -> triggers re-render
     setGraphData({
       nodes: updatedNodes,
       links: cleanedLinks,
     });
   };
-  
+
 
   return (
     <div style={{ height: "100vh", width: "100vw" }}>
@@ -152,7 +191,24 @@ export default function App() {
           <p>
             Placeholder info about {selectedNode.label}. Click "Take Quiz" to simulate quiz completion.
           </p>
-          <button onClick={handleQuizSubmit}>Take Quiz</button>
+          {quizData[selectedNode.id] && (
+            <>
+              <p><strong>Quiz:</strong> {quizData[selectedNode.id].question}</p>
+              {quizData[selectedNode.id].options.map((opt, idx) => (
+                <div key={idx}>
+                  <label>
+                    <input
+                      type="radio"
+                      name="quiz"
+                      value={idx}
+                      onChange={() => setSelectedAnswer(idx)}
+                    /> {opt}
+                  </label>
+                </div>
+              ))}
+            </>
+          )}
+          <button onClick={handleQuizSubmit}>Submit Quiz</button>
           {score !== null && <p>Score: {score}/10</p>}
         </div>
       )}
