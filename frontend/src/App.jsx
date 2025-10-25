@@ -15,7 +15,7 @@ const initialLinks = [
 ];
 
 export default function App() {
-  const [nodes, setNodes] = useState(initialNodes);
+  const [graphData, setGraphData] = useState({ nodes: initialNodes, links: initialLinks });
   const [selectedNode, setSelectedNode] = useState(null);
   const [score, setScore] = useState(null);
 
@@ -26,30 +26,61 @@ export default function App() {
   };
 
   const handleQuizSubmit = () => {
-    const newScore = Math.floor(Math.random() * 11); // simulate quiz result 0–10
+    const newScore = Math.floor(Math.random() * 11);
     setScore(newScore);
     unlockNodes(selectedNode, newScore);
   };
 
   const unlockNodes = (parent, score) => {
-    setNodes((prev) =>
-      prev.map((n) => {
-        if (initialLinks.some((l) => l.source === parent.id && l.target === n.id)) {
-          //const threshold = parent.level === 0 ? 10 : parent.level === 1 ? 9 : 8;
-          const threshold = -1; // For testing, set threshold to -1 to always unlock
-          if (score >= threshold) { n.unlocked = true; console.log(`Unlocked ${n.label}`);  }
-        }
-        return n;
-      })
-    );
+    //const threshold = parent.level === 0 ? 8 : 9;
+    const threshold  = 0;; // for testing
+    // collect child ids
+    const childIds = graphData.links
+      .filter(l => (l.source.id || l.source) === parent.id)
+      .map(l => l.target.id || l.target);
+  
+    // clone each node into a new object (drop force-graph's internal props)
+    const updatedNodes = graphData.nodes.map(n => {
+      const isChild = childIds.includes(n.id);
+      const shouldUnlock = isChild && !n.unlocked && score >= threshold;
+      return {
+        id: n.id,
+        label: n.label,
+        level: n.level,
+        unlocked: shouldUnlock ? true : n.unlocked, // update flag
+      };
+    });
+  
+    // rebuild links to plain {source, target} so force-graph refreshes positions safely
+    const cleanedLinks = graphData.links.map(l => ({
+      source: l.source.id || l.source,
+      target: l.target.id || l.target,
+    }));
+  
+    // new object breaks reference chain -> triggers re-render
+    setGraphData({
+      nodes: updatedNodes,
+      links: cleanedLinks,
+    });
   };
+  
 
   return (
-    <div style={{ height: "100vh", width: "1000vw" }}>
+    <div style={{ height: "100vh", width: "100vw" }}>
       <ForceGraph2D
-        graphData={{ nodes, links: initialLinks }}
+        graphData={graphData}
         nodeLabel="label"
-        nodeAutoColorBy="level"
+        nodeAutoColorBy={n => (n.unlocked ? "unlocked" : "locked")}
+        nodeCanvasObject={(node, ctx, globalScale) => {
+          const label = node.label;
+          const fontSize = 12 / globalScale;
+          ctx.font = `${fontSize}px Sans-Serif`;
+          ctx.fillStyle = node.unlocked ? "#1A659E" : "#98A2AB";
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI, false);
+          ctx.fill();
+          ctx.fillText(label, node.x + 8, node.y + 4);
+        }}
         onNodeClick={handleNodeClick}
       />
       {selectedNode && (
@@ -67,8 +98,7 @@ export default function App() {
         >
           <h3>{selectedNode.label}</h3>
           <p>
-            Placeholder info about {selectedNode.label}. Click "Take Quiz" to simulate
-            quiz completion.
+            Placeholder info about {selectedNode.label}. Click "Take Quiz" to simulate quiz completion.
           </p>
           <button onClick={handleQuizSubmit}>Take Quiz</button>
           {score !== null && <p>Score: {score}/10</p>}
