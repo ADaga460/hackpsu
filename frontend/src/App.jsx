@@ -1,89 +1,195 @@
 import React, { useState, useMemo, useEffect } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 
-// Animated Brain Component for Intro Screen
-function AnimatedBrain() {
-  const [time, setTime] = useState(0);
+// Error Toast Component
+function ErrorToast({ message, onClose }) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    // Slide down
+    setTimeout(() => setIsVisible(true), 10);
+    
+    // Slide up after 5 seconds
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(onClose, 300); // Wait for animation to complete
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: isVisible ? "20px" : "-100px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 1000,
+        background: "linear-gradient(135deg, #ef4444, #dc2626)",
+        color: "#fff",
+        padding: "16px 24px",
+        borderRadius: "12px",
+        boxShadow: "0 10px 40px rgba(239, 68, 68, 0.4)",
+        fontSize: "15px",
+        fontWeight: "500",
+        transition: "top 0.3s ease-out",
+        maxWidth: "90vw",
+        textAlign: "center"
+      }}
+    >
+      ⚠️ {message}
+    </div>
+  );
+}
+
+// Animated Globe Component for Intro Screen
+function AnimatedGlobe() {
+  const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTime(t => t + 0.02);
+      setRotation(r => r + 0.5);
     }, 30);
     return () => clearInterval(interval);
   }, []);
 
-  // Create brain-like node pattern
-  const brainNodes = useMemo(() => {
+  // Create spherical globe pattern with reduced nodes
+  const globeData = useMemo(() => {
     const nodes = [];
-    const nodeCount = 40;
+    const connections = [];
     
-    // Create nodes in a brain-like elliptical pattern
-    for (let i = 0; i < nodeCount; i++) {
-      const angle = (i / nodeCount) * Math.PI * 2;
-      const layer = Math.floor(i / 8);
-      const radius = 80 + layer * 30;
+    const radius = 150;
+    const latitudes = 12; // Reduced from previous
+    const longitudes = 20; // Reduced from previous
+    
+    let nodeId = 0;
+    
+    // Create nodes in spherical pattern
+    for (let lat = 0; lat < latitudes; lat++) {
+      const theta = (lat / latitudes) * Math.PI; // 0 to PI
+      const y = -radius * Math.cos(theta);
+      const ringRadius = radius * Math.sin(theta);
       
-      // Make it brain-shaped (elliptical, wider than tall)
-      const x = Math.cos(angle) * radius * 1.3;
-      const y = Math.sin(angle) * radius * 0.8;
-      
-      nodes.push({
-        id: i,
-        baseX: x,
-        baseY: y,
-        phase: Math.random() * Math.PI * 2,
-        speed: 0.8 + Math.random() * 0.4
-      });
+      for (let lon = 0; lon < longitudes; lon++) {
+        const phi = (lon / longitudes) * 2 * Math.PI; // 0 to 2PI
+        const x = ringRadius * Math.cos(phi);
+        const z = ringRadius * Math.sin(phi);
+        
+        nodes.push({
+          id: nodeId++,
+          x, y, z,
+          lat, lon
+        });
+      }
     }
-    return nodes;
+
+    // Create connections between nearby nodes (latitude and longitude neighbors)
+    nodes.forEach((node, i) => {
+      // Connect to next in longitude (around the ring)
+      const nextLon = nodes.find(n => 
+        n.lat === node.lat && n.lon === (node.lon + 1) % longitudes
+      );
+      if (nextLon) {
+        connections.push({ from: i, to: nextLon.id });
+      }
+      
+      // Connect to next latitude (vertical lines)
+      if (node.lat < latitudes - 1) {
+        const nextLat = nodes.find(n => 
+          n.lat === node.lat + 1 && n.lon === node.lon
+        );
+        if (nextLat) {
+          connections.push({ from: i, to: nextLat.id });
+        }
+      }
+    });
+
+    return { nodes, connections };
   }, []);
 
+  // Rotate all nodes together around Y-axis
+  const rotatedNodes = globeData.nodes.map(node => {
+    const rad = (rotation * Math.PI) / 180;
+    const cosR = Math.cos(rad);
+    const sinR = Math.sin(rad);
+    
+    // 3D rotation around Y-axis
+    const rotatedX = node.x * cosR + node.z * sinR;
+    const rotatedZ = -node.x * sinR + node.z * cosR;
+    
+    // Perspective projection
+    const perspective = 1200;
+    const scale = perspective / (perspective + rotatedZ);
+    
+    return {
+      ...node,
+      screenX: rotatedX * scale,
+      screenY: node.y * scale,
+      scale: scale,
+      z: rotatedZ
+    };
+  });
+
+  // Sort by z-depth for proper rendering
+  const sortedNodes = [...rotatedNodes].sort((a, b) => a.z - b.z);
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
-      <svg width="400" height="300" viewBox="-250 -150 500 300">
-        {brainNodes.map((node, idx) => {
-          // Sinusoidal motion for spinning effect
-          const offsetX = Math.sin(time * node.speed + node.phase) * 15;
-          const offsetY = Math.cos(time * node.speed * 0.7 + node.phase) * 10;
-          const x = node.baseX + offsetX;
-          const y = node.baseY + offsetY;
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <svg width="100%" height="100%" viewBox="-400 -300 800 600" className="opacity-25">
+        {/* Draw connections first */}
+        {globeData.connections.map((conn, idx) => {
+          const from = rotatedNodes[conn.from];
+          const to = rotatedNodes[conn.to];
           
-          // Opacity varies with motion
-          const opacity = 0.4 + Math.sin(time * node.speed + node.phase) * 0.3;
-          
-          return (
-            <circle
-              key={node.id}
-              cx={x}
-              cy={y}
-              r={3 + Math.sin(time + node.phase) * 1}
-              fill="#1A659E"
-              opacity={opacity}
-            />
-          );
+          // Only draw if both nodes are on visible side
+          if (from.z > -150 && to.z > -150) {
+            const avgZ = (from.z + to.z) / 2;
+            const depthFactor = (avgZ + 150) / 300;
+            const opacity = 0.15 + depthFactor * 0.25;
+            const strokeWidth = 0.8 + depthFactor * 0.8;
+            
+            return (
+              <line
+                key={`conn-${idx}`}
+                x1={from.screenX}
+                y1={from.screenY}
+                x2={to.screenX}
+                y2={to.screenY}
+                stroke="#1A659E"
+                strokeWidth={strokeWidth}
+                opacity={opacity}
+              />
+            );
+          }
+          return null;
         })}
         
-        {/* Optional: Add connecting lines between nearby nodes */}
-        {brainNodes.map((node, idx) => {
-          if (idx % 3 !== 0) return null; // Only draw some connections
-          const nextNode = brainNodes[(idx + 1) % brainNodes.length];
-          
-          const x1 = node.baseX + Math.sin(time * node.speed + node.phase) * 15;
-          const y1 = node.baseY + Math.cos(time * node.speed * 0.7 + node.phase) * 10;
-          const x2 = nextNode.baseX + Math.sin(time * nextNode.speed + nextNode.phase) * 15;
-          const y2 = nextNode.baseY + Math.cos(time * nextNode.speed * 0.7 + nextNode.phase) * 10;
+        {/* Draw nodes */}
+        {sortedNodes.map(node => {
+          const depthFactor = (node.z + 150) / 300;
+          const depthOpacity = 0.3 + depthFactor * 0.7;
+          const size = 2.5 + node.scale * 2;
+          const brightness = 0.6 + depthFactor * 0.4;
           
           return (
-            <line
-              key={`line-${idx}`}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#1A659E"
-              strokeWidth="1"
-              opacity="0.15"
-            />
+            <g key={node.id}>
+              <circle
+                cx={node.screenX}
+                cy={node.screenY}
+                r={size + 0.8}
+                fill="#1A659E"
+                opacity={depthOpacity * 0.3}
+              />
+              <circle
+                cx={node.screenX}
+                cy={node.screenY}
+                r={size}
+                fill="#1A659E"
+                opacity={depthOpacity}
+                style={{ filter: `brightness(${brightness})` }}
+              />
+            </g>
           );
         })}
       </svg>
@@ -158,27 +264,152 @@ export default function App() {
   const [view, setView] = useState("intro");
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(false);
+  const [savedGraphs, setSavedGraphs] = useState([]);
+  const [activeTabId, setActiveTabId] = useState(null);
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [nodeContent, setNodeContent] = useState({});
   const [selectedNode, setSelectedNode] = useState(null);
   const [score, setScore] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [error, setError] = useState(null);
 
+  // Check if storage is available
+  const isStorageAvailable = () => {
+    return typeof window !== 'undefined' && window.storage;
+  };
+
+  // Load saved graphs from storage on mount
   useEffect(() => {
-    const loadGraphData = async () => {
-      try {
-        const data = await fetchGraphDataFallback();
-        const laidOut = solarSystemLayout(data.nodes, data.links);
-        setGraphData({ nodes: laidOut, links: data.links });
-        setNodeContent(data.nodeContent);
-      } catch (error) {
-        console.error('Error loading graph data:', error);
-        alert('Failed to load graph data. Please refresh the page.');
+    if (isStorageAvailable()) {
+      loadSavedGraphs();
+    }
+  }, []);
+
+  const loadSavedGraphs = async () => {
+    if (!isStorageAvailable()) {
+      console.log('Storage not available');
+      return;
+    }
+    
+    try {
+      const result = await window.storage.list('graph:');
+      if (result && result.keys) {
+        const graphs = [];
+        for (const key of result.keys) {
+          try {
+            const data = await window.storage.get(key);
+            if (data && data.value) {
+              graphs.push(JSON.parse(data.value));
+            }
+          } catch (err) {
+            console.error(`Error loading graph ${key}:`, err);
+          }
+        }
+        setSavedGraphs(graphs.sort((a, b) => b.timestamp - a.timestamp));
       }
+    } catch (error) {
+      console.log('No saved graphs found or storage error:', error);
+      setSavedGraphs([]);
+    }
+  };
+
+  const saveCurrentGraph = async (topicName) => {
+    const graphId = `graph:${Date.now()}`;
+    const graphState = {
+      id: graphId,
+      topic: topicName,
+      timestamp: Date.now(),
+      nodes: graphData.nodes,
+      links: graphData.links,
+      nodeContent: nodeContent
     };
 
-    loadGraphData();
-  }, []);
+    if (!isStorageAvailable()) {
+      console.log('Storage not available - graph not persisted');
+      // Still set the active tab and continue without storage
+      setActiveTabId(graphId);
+      setSavedGraphs(prev => [graphState, ...prev]);
+      return;
+    }
+
+    try {
+      await window.storage.set(graphId, JSON.stringify(graphState));
+      await loadSavedGraphs();
+      setActiveTabId(graphId);
+    } catch (error) {
+      console.error('Error saving graph:', error);
+      // Continue anyway without persistence
+      setActiveTabId(graphId);
+      setSavedGraphs(prev => [graphState, ...prev]);
+    }
+  };
+
+  const loadGraph = async (graphId) => {
+    if (!isStorageAvailable()) {
+      // Load from in-memory savedGraphs
+      const graph = savedGraphs.find(g => g.id === graphId);
+      if (graph) {
+        setGraphData({ nodes: graph.nodes, links: graph.links });
+        setNodeContent(graph.nodeContent);
+        setTopic(graph.topic);
+        setActiveTabId(graphId);
+        setView("graph");
+      }
+      return;
+    }
+
+    try {
+      const result = await window.storage.get(graphId);
+      if (result && result.value) {
+        const graphState = JSON.parse(result.value);
+        setGraphData({ nodes: graphState.nodes, links: graphState.links });
+        setNodeContent(graphState.nodeContent);
+        setTopic(graphState.topic);
+        setActiveTabId(graphId);
+        setView("graph");
+      }
+    } catch (error) {
+      console.error('Error loading graph:', error);
+      // Try loading from in-memory as fallback
+      const graph = savedGraphs.find(g => g.id === graphId);
+      if (graph) {
+        setGraphData({ nodes: graph.nodes, links: graph.links });
+        setNodeContent(graph.nodeContent);
+        setTopic(graph.topic);
+        setActiveTabId(graphId);
+        setView("graph");
+      }
+    }
+  };
+
+  const deleteGraph = async (graphId) => {
+    if (!isStorageAvailable()) {
+      // Delete from in-memory only
+      setSavedGraphs(prev => prev.filter(g => g.id !== graphId));
+      if (activeTabId === graphId) {
+        setActiveTabId(null);
+        setView("intro");
+      }
+      return;
+    }
+
+    try {
+      await window.storage.delete(graphId);
+      await loadSavedGraphs();
+      if (activeTabId === graphId) {
+        setActiveTabId(null);
+        setView("intro");
+      }
+    } catch (error) {
+      console.error('Error deleting graph:', error);
+      // Delete from in-memory as fallback
+      setSavedGraphs(prev => prev.filter(g => g.id !== graphId));
+      if (activeTabId === graphId) {
+        setActiveTabId(null);
+        setView("intro");
+      }
+    }
+  };
 
   const fetchGraphDataFallback = async () => {
     return {
@@ -269,6 +500,13 @@ export default function App() {
     setLoading(true);
 
     try {
+      const data = await fetchGraphDataFallback();
+      const laidOut = solarSystemLayout(data.nodes, data.links);
+      setGraphData({ nodes: laidOut, links: data.links });
+      setNodeContent(data.nodeContent);
+      
+      // Save the new graph
+      await saveCurrentGraph(topic);
       setView("graph");
     } catch (error) {
       console.error('Error generating graph:', error);
@@ -285,7 +523,7 @@ export default function App() {
     setSelectedAnswer(null);
   };
 
-  const unlockNodes = (parent, score) => {
+  const unlockNodes = async (parent, score) => {
     const threshold = 0;
     const nodeParents = {};
     graphData.nodes.forEach(n => {
@@ -337,15 +575,39 @@ export default function App() {
       target: l.target.id || l.target,
     }));
 
-    setGraphData({
+    const newGraphData = {
       nodes: updatedNodes,
       links: cleanedLinks,
-    });
+    };
+
+    setGraphData(newGraphData);
+
+    // Save progress to storage
+    if (activeTabId && isStorageAvailable()) {
+      try {
+        const result = await window.storage.get(activeTabId);
+        if (result && result.value) {
+          const graphState = JSON.parse(result.value);
+          graphState.nodes = updatedNodes;
+          graphState.links = cleanedLinks;
+          await window.storage.set(activeTabId, JSON.stringify(graphState));
+        }
+      } catch (error) {
+        console.error('Error saving progress:', error);
+      }
+    } else if (activeTabId) {
+      // Update in-memory storage
+      setSavedGraphs(prev => prev.map(g => 
+        g.id === activeTabId 
+          ? { ...g, nodes: updatedNodes, links: cleanedLinks }
+          : g
+      ));
+    }
   };
 
   const handleQuizSubmit = () => {
     if (selectedAnswer === null) {
-      alert("Please select an answer!");
+      setError("Please select an answer before submitting!");
       return;
     }
 
@@ -395,13 +657,14 @@ export default function App() {
 
   if (view === "intro") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center p-4 relative overflow-hidden">
-        <AnimatedBrain />
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center p-4 relative overflow-hidden" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+        {error && <ErrorToast message={error} onClose={() => setError(null)} />}
+        <AnimatedGlobe />
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full shadow-2xl border border-white/20 relative z-10">
-          <h1 className="text-4xl font-bold text-white mb-2 text-center">
+          <h1 className="text-4xl font-bold text-white mb-2 text-center" style={{ letterSpacing: '-0.02em' }}>
             StudySphere
           </h1>
-          <p className="text-white/80 mb-6 text-center">
+          <p className="text-white/80 mb-6 text-center" style={{ fontSize: '15px', lineHeight: '1.6' }}>
             Enter any topic to generate an interactive learning path!
           </p>
           <div>
@@ -412,192 +675,394 @@ export default function App() {
               onKeyPress={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
               placeholder="e.g., Machine Learning, Quantum Physics..."
               className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 mb-4"
+              style={{ fontSize: '15px' }}
             />
             <button
               onClick={handleStartLearning}
               disabled={!topic.trim() || loading}
               className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-lg font-semibold hover:from-cyan-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              style={{ fontSize: '15px', letterSpacing: '-0.01em' }}
             >
               {loading ? "Generating..." : "Generate Learning Path"}
             </button>
           </div>
+
+          {/* Saved Graphs Section - Now as invisible button */}
+          {savedGraphs.length > 0 && (
+            <button
+              onClick={() => setView("graph")}
+              className="mt-6 w-full text-left opacity-0 hover:opacity-100 transition-opacity duration-300"
+            >
+              <div>
+                <h2 className="text-lg font-semibold text-white mb-3">Your Learning Paths</h2>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {savedGraphs.map(graph => (
+                    <div 
+                      key={graph.id}
+                      className="bg-white/10 rounded-lg p-3 flex items-center justify-between hover:bg-white/20 transition-all cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        loadGraph(graph.id);
+                      }}
+                    >
+                      <div className="flex-1">
+                        <p className="text-white font-medium">{graph.topic}</p>
+                        <p className="text-white/60 text-sm">
+                          {new Date(graph.timestamp).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Delete "${graph.topic}"?`)) {
+                            deleteGraph(graph.id);
+                          }
+                        }}
+                        className="text-red-400 hover:text-red-300 ml-2 px-2"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ height: "100vh", width: "100vw", position: "relative" }}>
+    <div style={{ height: "100vh", width: "100vw", position: "relative", display: "flex", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+      {error && <ErrorToast message={error} onClose={() => setError(null)} />}
+      {/* Left Sidebar with Tabs */}
       <div style={{
-        position: "absolute",
-        top: 20,
-        left: 20,
-        zIndex: 10,
-        background: "rgba(17, 17, 17, 0.9)",
-        padding: "12px",
-        borderRadius: "8px",
+        width: "320px",
+        background: "rgba(17, 17, 17, 0.95)",
+        borderRight: "1px solid #333",
         display: "flex",
-        gap: "8px"
+        flexDirection: "column",
+        zIndex: 20
       }}>
-        <input
-          type="text"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
-          placeholder="Enter new topic..."
-          style={{
-            padding: "8px 12px",
-            borderRadius: "6px",
-            border: "1px solid #444",
-            background: "#222",
-            color: "#fff",
-            outline: "none",
-            width: "200px"
-          }}
-        />
-        <button
-          onClick={handleStartLearning}
-          disabled={!topic.trim() || loading}
-          style={{
-            padding: "8px 16px",
-            borderRadius: "6px",
-            border: "none",
-            background: topic.trim() ? "linear-gradient(to right, #06b6d4, #3b82f6)" : "#444",
-            color: "#fff",
-            cursor: topic.trim() ? "pointer" : "not-allowed",
-            fontWeight: "600"
-          }}
-        >
-          {loading ? "..." : "Generate"}
-        </button>
-      </div>
-      <ForceGraph2D
-        graphData={graphData}
-        nodeLabel="label"
-        nodeAutoColorBy={n => (n.unlocked ? "unlocked" : "locked")}
-        cooldownTicks={1}
-        d3VelocityDecay={4.75}
-        linkWidth={3}
-        linkColor={() => "#4A5568"}
-        linkDirectionalParticles={2}
-        linkDirectionalParticleWidth={2}
-        nodeRelSize={10}
-        nodeVal={node => {
-          const nodeRadius = 50 - (node.level * 6);
-          return nodeRadius;
-        }}
-        nodeCanvasObjectMode={() => 'replace'}
-        nodeCanvasObject={(node, ctx, globalScale) => {
-          const label = node.label;
-          const fontSize = 12 / globalScale;
-          const nodeRadius = 20 - (node.level * 3);
-          ctx.font = `${fontSize}px Sans-Serif`;
-          ctx.textAlign = "left";
-          ctx.textBaseline = "middle";
+        {/* New Topic Input */}
+        <div style={{ padding: "16px", borderBottom: "1px solid #333" }}>
+          <input
+            type="text"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
+            placeholder="Enter new topic..."
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              borderRadius: "6px",
+              border: "1px solid #444",
+              background: "#222",
+              color: "#fff",
+              outline: "none",
+              marginBottom: "8px",
+              fontSize: "14px"
+            }}
+          />
+          <button
+            onClick={handleStartLearning}
+            disabled={!topic.trim() || loading}
+            style={{
+              width: "100%",
+              padding: "10px 16px",
+              borderRadius: "6px",
+              border: "none",
+              background: topic.trim() ? "linear-gradient(to right, #06b6d4, #3b82f6)" : "#444",
+              color: "#fff",
+              cursor: topic.trim() ? "pointer" : "not-allowed",
+              fontWeight: "600",
+              fontSize: "14px"
+            }}
+          >
+            {loading ? "Generating..." : "Generate New Path"}
+          </button>
+        </div>
 
-          let opacity = 1;
-          if (!node.unlocked && !node.quiz_completed) {
-            const distance = nodeDistances[node.id] || 0;
-            opacity = Math.max(0.2, 1 - (distance * 0.25));
-          }
-
-          let fillColor;
-          if (node.quiz_completed) {
-            fillColor = "#22C55E";
-          } else if (node.unlocked) {
-            fillColor = "#1A659E";
-          } else {
-            fillColor = "#98A2AB";
-          }
-
-          ctx.globalAlpha = opacity;
-          ctx.fillStyle = fillColor;
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
-          ctx.fill();
-
-          ctx.fillStyle = "#fff";
-          ctx.fillText(label, node.x + nodeRadius + 2, node.y + 4);
-          ctx.globalAlpha = 1;
-        }}
-        onNodeClick={handleNodeClick}
-      />
-
-      {selectedNode && (
-        <div
-          style={{
-            position: "absolute",
-            top: 20,
-            right: 20,
-            width: 300,
-            padding: 20,
-            background: "#111",
-            color: "#fff",
-            borderRadius: 12,
-            maxHeight: "80vh",
-            overflowY: "auto"
-          }}
-        >
-          <h3>{selectedNode.label}</h3>
-          <p style={{ marginTop: "10px", lineHeight: "1.6" }}>
-            {nodeContent[selectedNode.id]?.content || "Loading content..."}
-          </p>
-          {nodeContent[selectedNode.id]?.quiz && (
-            <>
-              <p style={{ marginTop: "15px" }}><strong>Quiz:</strong> {nodeContent[selectedNode.id].quiz.question}</p>
-              {nodeContent[selectedNode.id].quiz.options.map((opt, idx) => (
-                <div key={idx} style={{ marginTop: "8px" }}>
-                  <label>
-                    <input
-                      type="radio"
-                      name="quiz"
-                      value={idx}
-                      checked={selectedAnswer === idx}
-                      onChange={() => setSelectedAnswer(idx)}
-                      disabled={score !== null}
-                    /> {opt}
-                  </label>
-                </div>
-              ))}
-            </>
-          )}
-
-          {score === null ? (
-            <button onClick={handleQuizSubmit} style={{ marginTop: "15px", padding: "10px 20px", background: "#3b82f6", border: "none", borderRadius: "6px", color: "#fff", cursor: "pointer", fontWeight: "600" }}>Submit Quiz</button>
-          ) : score === 10 ? (
-            <div style={{ marginTop: "15px", padding: "10px", background: "rgba(34, 197, 94, 0.2)", borderRadius: "6px" }}>
-              <p style={{ color: "#22C55E", fontWeight: "bold", margin: 0 }}>
-                ✓ Correct! Move on to {
-                  graphData.links
-                    .filter(l => (l.source.id || l.source) === selectedNode.id)
-                    .map(l => {
-                      const targetId = l.target.id || l.target;
-                      const targetNode = graphData.nodes.find(n => n.id === targetId);
-                      return targetNode?.label;
-                    })
-                    .filter(Boolean)
-                    .join(", ") || "the next topics"
-                }
-              </p>
-            </div>
+        {/* Tabs */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+          <h3 style={{ color: "#999", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", padding: "8px 12px", marginBottom: "4px", letterSpacing: '0.05em' }}>
+            Your Learning Paths
+          </h3>
+          {savedGraphs.length === 0 ? (
+            <p style={{ color: "#666", padding: "12px", fontSize: "13px", textAlign: "center", lineHeight: '1.5' }}>
+              No saved paths yet. Create one above!
+            </p>
           ) : (
-            <div style={{ marginTop: "15px" }}>
-              <p style={{ color: "#EF4444", fontWeight: "bold", marginBottom: "10px" }}>
-                ✗ Incorrect! Try again.
-              </p>
-              <button
-                onClick={() => {
-                  setScore(null);
-                  setSelectedAnswer(null);
+            savedGraphs.map(graph => (
+              <div
+                key={graph.id}
+                onClick={() => loadGraph(graph.id)}
+                style={{
+                  padding: "12px",
+                  margin: "4px 0",
+                  borderRadius: "6px",
+                  background: activeTabId === graph.id ? "#2563eb" : "#2a2a2a",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  border: activeTabId === graph.id ? "1px solid #3b82f6" : "1px solid transparent",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
                 }}
-                style={{ padding: "10px 20px", background: "#ef4444", border: "none", borderRadius: "6px", color: "#fff", cursor: "pointer", fontWeight: "600" }}
+                onMouseEnter={(e) => {
+                  if (activeTabId !== graph.id) {
+                    e.currentTarget.style.background = "#333";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTabId !== graph.id) {
+                    e.currentTarget.style.background = "#2a2a2a";
+                  }
+                }}
               >
-                Retry Quiz
-              </button>
-            </div>
+                <div>
+                  <p style={{ color: "#fff", fontWeight: "500", fontSize: "14px", marginBottom: "4px" }}>
+                    {graph.topic}
+                  </p>
+                  <p style={{ color: "#999", fontSize: "12px" }}>
+                    {new Date(graph.timestamp).toLocaleDateString()} • {graph.nodes.filter(n => n.quiz_completed).length}/{graph.nodes.length} completed
+                  </p>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm(`Delete "${graph.topic}"?`)) {
+                      deleteGraph(graph.id);
+                    }
+                  }}
+                  style={{
+                    color: "#ef4444",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "4px 8px",
+                    fontSize: "18px"
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))
           )}
         </div>
-      )}
+      </div>
+
+      {/* Main Graph Area */}
+      <div style={{ flex: 1, position: "relative" }}>
+        <ForceGraph2D
+          graphData={graphData}
+          nodeLabel="label"
+          nodeAutoColorBy={n => (n.unlocked ? "unlocked" : "locked")}
+          cooldownTicks={1}
+          d3VelocityDecay={4.75}
+          linkWidth={3}
+          linkColor={() => "#4A5568"}
+          linkDirectionalParticles={2}
+          linkDirectionalParticleWidth={2}
+          nodeRelSize={10}
+          nodeVal={node => {
+            const nodeRadius = 50 - (node.level * 6);
+            return nodeRadius;
+          }}
+          nodeCanvasObjectMode={() => 'replace'}
+          nodeCanvasObject={(node, ctx, globalScale) => {
+            const label = node.label;
+            const fontSize = 12 / globalScale;
+            const nodeRadius = 20 - (node.level * 3);
+            ctx.font = `${fontSize}px Sans-Serif`;
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+
+            let opacity = 1;
+            if (!node.unlocked && !node.quiz_completed) {
+              const distance = nodeDistances[node.id] || 0;
+              opacity = Math.max(0.2, 1 - (distance * 0.25));
+            }
+
+            let fillColor;
+            if (node.quiz_completed) {
+              fillColor = "#22C55E";
+            } else if (node.unlocked) {
+              fillColor = "#1A659E";
+            } else {
+              fillColor = "#98A2AB";
+            }
+
+            ctx.globalAlpha = opacity;
+            ctx.fillStyle = fillColor;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
+            ctx.fill();
+
+            ctx.fillStyle = "#fff";
+            ctx.fillText(label, node.x + nodeRadius + 2, node.y + 4);
+            ctx.globalAlpha = 1;
+          }}
+          onNodeClick={handleNodeClick}
+        />
+
+        {/* Node Detail Panel */}
+        {selectedNode && (
+          <div
+            style={{
+              position: "absolute",
+              top: 20,
+              right: 20,
+              width: 340,
+              padding: 20,
+              background: "#111",
+              color: "#fff",
+              borderRadius: 12,
+              maxHeight: "80vh",
+              overflowY: "auto",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.5)"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "12px" }}>
+              <h3 style={{ margin: 0, fontSize: "20px" }}>{selectedNode.label}</h3>
+              <button
+                onClick={() => setSelectedNode(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#999",
+                  cursor: "pointer",
+                  fontSize: "20px",
+                  padding: "0 4px"
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <p style={{ marginTop: "10px", lineHeight: "1.6", color: "#ccc" }}>
+              {nodeContent[selectedNode.id]?.content || "Loading content..."}
+            </p>
+            {nodeContent[selectedNode.id]?.quiz && (
+              <>
+                <div style={{ 
+                  marginTop: "20px", 
+                  padding: "12px", 
+                  background: "#1a1a1a", 
+                  borderRadius: "8px",
+                  borderLeft: "3px solid #3b82f6"
+                }}>
+                  <p style={{ fontWeight: "600", marginBottom: "12px" }}>
+                    {nodeContent[selectedNode.id].quiz.question}
+                  </p>
+                  {nodeContent[selectedNode.id].quiz.options.map((opt, idx) => (
+                    <div key={idx} style={{ marginTop: "10px" }}>
+                      <label style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        cursor: score === null ? "pointer" : "default",
+                        padding: "8px",
+                        borderRadius: "6px",
+                        background: selectedAnswer === idx ? "#2a2a2a" : "transparent",
+                        transition: "all 0.2s"
+                      }}>
+                        <input
+                          type="radio"
+                          name="quiz"
+                          value={idx}
+                          checked={selectedAnswer === idx}
+                          onChange={() => setSelectedAnswer(idx)}
+                          disabled={score !== null}
+                          style={{ marginRight: "10px" }}
+                        /> 
+                        <span style={{ flex: 1 }}>{opt}</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {score === null ? (
+              <button 
+                onClick={handleQuizSubmit} 
+                style={{ 
+                  marginTop: "15px", 
+                  width: "100%",
+                  padding: "12px 20px", 
+                  background: "linear-gradient(to right, #3b82f6, #2563eb)", 
+                  border: "none", 
+                  borderRadius: "8px", 
+                  color: "#fff", 
+                  cursor: "pointer", 
+                  fontWeight: "600",
+                  fontSize: "15px"
+                }}
+              >
+                Submit Answer
+              </button>
+            ) : score === 10 ? (
+              <div style={{ 
+                marginTop: "15px", 
+                padding: "16px", 
+                background: "rgba(34, 197, 94, 0.15)", 
+                borderRadius: "8px",
+                border: "1px solid rgba(34, 197, 94, 0.3)"
+              }}>
+                <p style={{ color: "#22C55E", fontWeight: "bold", margin: 0, marginBottom: "8px", fontSize: "16px" }}>
+                  ✓ Correct!
+                </p>
+                <p style={{ color: "#86efac", margin: 0, fontSize: "14px" }}>
+                  Move on to: {
+                    graphData.links
+                      .filter(l => (l.source.id || l.source) === selectedNode.id)
+                      .map(l => {
+                        const targetId = l.target.id || l.target;
+                        const targetNode = graphData.nodes.find(n => n.id === targetId);
+                        return targetNode?.label;
+                      })
+                      .filter(Boolean)
+                      .join(", ") || "the next topics"
+                  }
+                </p>
+              </div>
+            ) : (
+              <div style={{ marginTop: "15px" }}>
+                <div style={{ 
+                  padding: "16px", 
+                  background: "rgba(239, 68, 68, 0.15)", 
+                  borderRadius: "8px",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  marginBottom: "12px"
+                }}>
+                  <p style={{ color: "#EF4444", fontWeight: "bold", margin: 0 }}>
+                    ✗ Incorrect. Try again!
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setScore(null);
+                    setSelectedAnswer(null);
+                  }}
+                  style={{ 
+                    padding: "12px 20px", 
+                    width: "100%",
+                    background: "#ef4444", 
+                    border: "none", 
+                    borderRadius: "8px", 
+                    color: "#fff", 
+                    cursor: "pointer", 
+                    fontWeight: "600",
+                    fontSize: "15px"
+                  }}
+                >
+                  Retry Quiz
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
