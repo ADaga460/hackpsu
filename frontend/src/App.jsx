@@ -71,7 +71,7 @@ function LoadingProgress({ stage, progress }) {
         {stages.map((s, idx) => {
           const isActive = idx === currentStageIndex;
           const isComplete = idx < currentStageIndex;
-          
+
           return (
             <div key={s.name} style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
               <div style={{
@@ -311,7 +311,7 @@ export default function App() {
       // Stage 1: Generate structure
       setLoadingStage("structure");
       setLoadingProgress(0);
-      
+
       const structureResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-structure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -328,7 +328,7 @@ export default function App() {
       // Stage 2: Generate content
       setLoadingStage("content");
       setLoadingProgress(0);
-      
+
       const contentResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -348,7 +348,7 @@ export default function App() {
       // Stage 3: Generate quizzes
       setLoadingStage("quizzes");
       setLoadingProgress(0);
-      
+
       const quizzesResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-quizzes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -418,12 +418,12 @@ export default function App() {
       setError("🔒 Complete previous topics first");
       return;
     }
-    
+
     if (!nodeContent[node.id]) {
       setError("Content not available for this node");
       return;
     }
-    
+
     setSelectedNode(node);
     setScore(null);
     setSelectedAnswer(null);
@@ -656,7 +656,7 @@ export default function App() {
                   <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
                 </radialGradient>
               </defs>
-              
+
               {/* Animated connections */}
               <line x1="250" y1="250" x2="150" y2="150" stroke="#3b82f6" strokeWidth="2" opacity="0.3" />
               <line x1="250" y1="250" x2="350" y2="150" stroke="#3b82f6" strokeWidth="2" opacity="0.3" />
@@ -666,17 +666,17 @@ export default function App() {
               <line x1="350" y1="150" x2="400" y2="100" stroke="#3b82f6" strokeWidth="1.5" opacity="0.2" />
               <line x1="150" y1="350" x2="100" y2="400" stroke="#3b82f6" strokeWidth="1.5" opacity="0.2" />
               <line x1="350" y1="350" x2="400" y2="400" stroke="#3b82f6" strokeWidth="1.5" opacity="0.2" />
-              
+
               {/* Center node */}
               <circle cx="250" cy="250" r="25" fill="url(#nodeGlow)" />
               <circle cx="250" cy="250" r="18" fill="#3b82f6" />
-              
+
               {/* Level 1 nodes */}
               <circle cx="150" cy="150" r="18" fill="#3b82f6" opacity="0.7" />
               <circle cx="350" cy="150" r="18" fill="#3b82f6" opacity="0.7" />
               <circle cx="150" cy="350" r="18" fill="#3b82f6" opacity="0.7" />
               <circle cx="350" cy="350" r="18" fill="#3b82f6" opacity="0.7" />
-              
+
               {/* Level 2 nodes */}
               <circle cx="100" cy="100" r="14" fill="#64748b" opacity="0.5" />
               <circle cx="400" cy="100" r="14" fill="#64748b" opacity="0.5" />
@@ -861,7 +861,7 @@ export default function App() {
             const targetNode = graphData.nodes.find(n => n.id === (link.target.id || link.target));
             const bothUnlocked = sourceNode?.unlocked && targetNode?.unlocked;
             const oneUnlocked = sourceNode?.unlocked || targetNode?.unlocked;
-            
+
             if (bothUnlocked) return "rgba(59, 130, 246, 0.4)";
             if (oneUnlocked) return "rgba(100, 116, 139, 0.25)";
             return "rgba(71, 85, 105, 0.15)";
@@ -905,15 +905,15 @@ export default function App() {
             }
 
             ctx.globalAlpha = opacity;
-            
+
             ctx.shadowBlur = node.unlocked ? 15 : 0;
             ctx.shadowColor = fillColor;
-            
+
             ctx.fillStyle = fillColor;
             ctx.beginPath();
             ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
             ctx.fill();
-            
+
             ctx.shadowBlur = 0;
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = 2 / globalScale;
@@ -930,7 +930,7 @@ export default function App() {
             ctx.shadowBlur = 3;
             ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
             ctx.fillText(label, node.x + nodeRadius + 8, node.y);
-            
+
             ctx.globalAlpha = 1;
             ctx.shadowBlur = 0;
           }}
@@ -976,25 +976,25 @@ export default function App() {
                 </button>
               </div>
             </div>
-            
+
             <div style={{ padding: "20px" }}>
               <p style={{ margin: 0, lineHeight: "1.6", color: "#cbd5e1", fontSize: "14px", whiteSpace: "pre-wrap" }}>
                 {nodeContent[selectedNode.id]?.content || "Loading content..."}
               </p>
-              
+
               {(() => {
                 const quiz = nodeContent[selectedNode.id]?.quiz;
                 console.log("Quiz data for node:", selectedNode.id, quiz);
-                
+
                 if (!quiz) {
                   return <p style={{ marginTop: "20px", color: "#64748b", fontSize: "13px" }}>No quiz available</p>;
                 }
-                
+
                 if (!quiz.question || !quiz.options || !Array.isArray(quiz.options)) {
                   console.error("Invalid quiz structure:", quiz);
                   return <p style={{ marginTop: "20px", color: "#ef4444", fontSize: "13px" }}>Quiz data is malformed</p>;
                 }
-                
+
                 return (
                   <div style={{ marginTop: "20px" }}>
                     <div style={{
