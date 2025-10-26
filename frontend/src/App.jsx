@@ -23,27 +23,28 @@ function ErrorToast({ message, onClose }) {
       zIndex: 1000,
       background: "linear-gradient(135deg, #ef4444, #dc2626)",
       color: "#fff",
-      padding: "16px 24px",
-      borderRadius: "12px",
-      boxShadow: "0 10px 40px rgba(239, 68, 68, 0.4)",
-      fontSize: "15px",
+      padding: "14px 20px",
+      borderRadius: "10px",
+      boxShadow: "0 8px 32px rgba(239, 68, 68, 0.3)",
+      fontSize: "14px",
       fontWeight: "500",
-      transition: "top 0.3s ease-out",
+      transition: "top 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       maxWidth: "90vw",
-      textAlign: "center"
+      textAlign: "center",
+      backdropFilter: "blur(10px)"
     }}>
       ⚠️ {message}
     </div>
   );
 }
 
-// Animated Globe Component for Intro Screen
+// Animated Globe Component
 function AnimatedGlobe() {
   const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setRotation(r => r + 0.5);
+      setRotation(r => r + 0.4);
     }, 30);
     return () => clearInterval(interval);
   }, []);
@@ -51,7 +52,7 @@ function AnimatedGlobe() {
   const globeData = useMemo(() => {
     const nodes = [];
     const connections = [];
-    const radius = 150;
+    const radius = 140;
     const latitudes = 8;
     const longitudes = 12;
     let nodeId = 0;
@@ -97,15 +98,15 @@ function AnimatedGlobe() {
 
   return (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <svg width="100%" height="120%" viewBox="-500 -400 1000 900" className="opacity-30">
+      <svg width="100%" height="120%" viewBox="-500 -400 1000 900" className="opacity-20">
         {globeData.connections.map((conn, idx) => {
           const from = rotatedNodes[conn.from];
           const to = rotatedNodes[conn.to];
           if (from.z > -150 && to.z > -150) {
             const avgZ = (from.z + to.z) / 2;
             const depthFactor = (avgZ + 150) / 300;
-            const opacity = 0.25 + depthFactor * 0.45;
-            const strokeWidth = 1.5 + depthFactor * 1.5;
+            const opacity = 0.15 + depthFactor * 0.25;
+            const strokeWidth = 1 + depthFactor * 1;
             return (
               <line
                 key={`conn-${idx}`}
@@ -113,7 +114,7 @@ function AnimatedGlobe() {
                 y1={from.screenY}
                 x2={to.screenX}
                 y2={to.screenY}
-                stroke="#1A659E"
+                stroke="#60a5fa"
                 strokeWidth={strokeWidth}
                 opacity={opacity}
                 strokeLinecap="round"
@@ -125,14 +126,12 @@ function AnimatedGlobe() {
         {sortedNodes.map(node => {
           if (node.z < -100) return null;
           const depthFactor = (node.z + 150) / 300;
-          const depthOpacity = 0.4 + depthFactor * 0.6;
-          const size = 3 + node.scale * 2.5;
-          const brightness = 0.7 + depthFactor * 0.3;
+          const depthOpacity = 0.3 + depthFactor * 0.4;
+          const size = 2.5 + node.scale * 2;
           return (
             <g key={node.id}>
-              <circle cx={node.screenX} cy={node.screenY} r={size + 1.2} fill="#1A659E" opacity={depthOpacity * 0.25} />
-              <circle cx={node.screenX} cy={node.screenY} r={size} fill="#1A659E" opacity={depthOpacity}
-                style={{ filter: `brightness(${brightness})` }} />
+              <circle cx={node.screenX} cy={node.screenY} r={size + 1} fill="#60a5fa" opacity={depthOpacity * 0.2} />
+              <circle cx={node.screenX} cy={node.screenY} r={size} fill="#60a5fa" opacity={depthOpacity} />
             </g>
           );
         })}
@@ -331,15 +330,13 @@ export default function App() {
 
       const result = await response.json();
 
-      // The API should return data with nodes, links, and nodeContent
-      // Transform the quiz format from array to single quiz object for compatibility
       const transformedNodeContent = {};
       if (result.nodeContent) {
         Object.keys(result.nodeContent).forEach(nodeId => {
           const nodeData = result.nodeContent[nodeId];
           transformedNodeContent[nodeId] = {
             content: nodeData.content,
-            quiz: nodeData.quiz  // Now expects single quiz object, not array
+            quiz: nodeData.quiz
           };
         });
       }
@@ -381,7 +378,10 @@ export default function App() {
   };
 
   const handleNodeClick = (node) => {
-    if (!node.unlocked) return alert("🔒 Locked. Finish previous quizzes.");
+    if (!node.unlocked) {
+      setError("🔒 Complete previous topics first");
+      return;
+    }
     setSelectedNode(node);
     setScore(null);
     setSelectedAnswer(null);
@@ -469,7 +469,7 @@ export default function App() {
 
   const handleQuizSubmit = () => {
     if (selectedAnswer === null) {
-      setError("Please select an answer before submitting!");
+      setError("Please select an answer first");
       return;
     }
 
@@ -522,60 +522,60 @@ export default function App() {
   const progressPercent = totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0;
 
   const getProgressColor = () => {
-    if (progressPercent === 0) return "#ef4444";
-    if (progressPercent < 50) return "#ef4444";
-    if (progressPercent < 70) return "#eab308";
-    return "#22c55e";
+    if (progressPercent < 33) return "#ef4444";
+    if (progressPercent < 66) return "#f59e0b";
+    return "#10b981";
   };
 
   if (view === "intro") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex relative overflow-hidden" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex relative overflow-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
         {error && <ErrorToast message={error} onClose={() => setError(null)} />}
 
-        {/* Left Side - Content */}
         <div className="w-1/2 flex items-center justify-center p-12 relative z-10">
-          <div className="max-w-lg w-full">
-            <h1 className="text-5xl font-bold text-white mb-3" style={{ letterSpacing: '-0.02em' }}>
-              StudySphere
-            </h1>
-            <p className="text-white/80 mb-8 text-lg" style={{ lineHeight: '1.6' }}>
-              Enter any topic to generate an interactive learning path!
-            </p>
-            <div>
+          <div className="max-w-md w-full">
+            <div className="mb-8">
+              <h1 className="text-5xl font-bold text-white mb-2" style={{ letterSpacing: '-0.03em' }}>
+                StudySphere
+              </h1>
+              <p className="text-slate-300 text-base" style={{ lineHeight: '1.5' }}>
+                Interactive learning paths powered by AI
+              </p>
+            </div>
+            <div className="space-y-3">
               <input
                 type="text"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
-                placeholder="e.g., Machine Learning, Quantum Physics..."
-                className="w-full px-5 py-4 rounded-xl bg-white/20 text-white placeholder-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 mb-4"
-                style={{ fontSize: '16px' }}
+                placeholder="Enter any topic..."
+                className="w-full px-4 py-3.5 rounded-lg bg-white/10 text-white placeholder-slate-400 border border-white/20 focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all backdrop-blur-sm"
+                style={{ fontSize: '15px' }}
               />
               <button
                 onClick={handleStartLearning}
                 disabled={!topic.trim() || loading}
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-4 rounded-xl font-semibold hover:from-cyan-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                style={{ fontSize: '16px', letterSpacing: '-0.01em' }}
+                className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-slate-700 text-white py-3.5 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                style={{ fontSize: '15px' }}
               >
-                {loading ? "Generating..." : "Generate Learning Path"}
+                {loading ? "Generating..." : "Start Learning"}
               </button>
             </div>
 
             {savedGraphs.length > 0 && (
-              <div className="mt-8 opacity-0 hover:opacity-100 transition-opacity duration-300">
-                <h2 className="text-xl font-semibold text-white mb-4">Your Learning Paths</h2>
-                <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {savedGraphs.map(graph => (
+              <div className="mt-10">
+                <h2 className="text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wide">Recent Paths</h2>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {savedGraphs.slice(0, 5).map(graph => (
                     <div
                       key={graph.id}
-                      className="bg-white/10 rounded-lg p-4 flex items-center justify-between hover:bg-white/20 transition-all cursor-pointer backdrop-blur-sm"
+                      className="bg-white/5 hover:bg-white/10 rounded-lg p-3 flex items-center justify-between transition-all cursor-pointer border border-white/10"
                       onClick={() => loadGraph(graph.id)}
                     >
-                      <div className="flex-1">
-                        <p className="text-white font-medium text-base">{graph.topic}</p>
-                        <p className="text-white/60 text-sm">
-                          {new Date(graph.timestamp).toLocaleDateString()}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium text-sm truncate">{graph.topic}</p>
+                        <p className="text-slate-400 text-xs mt-0.5">
+                          {graph.nodes.filter(n => n.quiz_completed).length}/{graph.nodes.length} completed
                         </p>
                       </div>
                       <button
@@ -585,7 +585,7 @@ export default function App() {
                             deleteGraph(graph.id);
                           }
                         }}
-                        className="text-red-400 hover:text-red-300 ml-3 px-2"
+                        className="text-slate-500 hover:text-red-400 ml-3 px-2 transition-colors"
                       >
                         ✕
                       </button>
@@ -597,8 +597,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right Side - Globe */}
-        <div className="w-1/2 relative flex items-center justify-center" style={{ transform: 'translateY(10%)' }}>
+        <div className="w-1/2 relative flex items-center justify-center">
           <AnimatedGlobe />
         </div>
       </div>
@@ -606,37 +605,38 @@ export default function App() {
   }
 
   return (
-    <div style={{ height: "100vh", width: "100vw", position: "relative", display: "flex", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+    <div style={{ height: "100vh", width: "100vw", position: "relative", display: "flex", fontFamily: "'Inter', system-ui, sans-serif", background: "#0f172a" }}>
       {error && <ErrorToast message={error} onClose={() => setError(null)} />}
 
-      {/* Left Sidebar with Tabs */}
       <div style={{
-        width: sidebarCollapsed ? "0" : "320px",
-        background: "rgba(17, 17, 17, 0.95)",
-        borderRight: "1px solid #333",
+        width: sidebarCollapsed ? "0" : "280px",
+        background: "rgba(15, 23, 42, 0.95)",
+        borderRight: "1px solid rgba(255, 255, 255, 0.1)",
         display: "flex",
         flexDirection: "column",
         zIndex: 20,
-        transition: "width 0.3s ease",
-        overflow: "hidden"
+        transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        overflow: "hidden",
+        backdropFilter: "blur(10px)"
       }}>
-        <div style={{ padding: "16px", borderBottom: "1px solid #333" }}>
+        <div style={{ padding: "16px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}>
           <input
             type="text"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
-            placeholder="Enter new topic..."
+            placeholder="New topic..."
             style={{
               width: "100%",
-              padding: "10px 12px",
-              borderRadius: "6px",
-              border: "1px solid #444",
-              background: "#222",
+              padding: "9px 12px",
+              borderRadius: "8px",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              background: "rgba(255, 255, 255, 0.05)",
               color: "#fff",
               outline: "none",
               marginBottom: "8px",
-              fontSize: "14px"
+              fontSize: "13px",
+              transition: "all 0.2s"
             }}
           />
           <button
@@ -644,27 +644,28 @@ export default function App() {
             disabled={!topic.trim() || loading}
             style={{
               width: "100%",
-              padding: "10px 16px",
-              borderRadius: "6px",
+              padding: "9px 12px",
+              borderRadius: "8px",
               border: "none",
-              background: topic.trim() ? "linear-gradient(to right, #06b6d4, #3b82f6)" : "#444",
+              background: topic.trim() ? "#3b82f6" : "rgba(255, 255, 255, 0.1)",
               color: "#fff",
               cursor: topic.trim() ? "pointer" : "not-allowed",
-              fontWeight: "600",
-              fontSize: "14px"
+              fontWeight: "500",
+              fontSize: "13px",
+              transition: "all 0.2s"
             }}
           >
-            {loading ? "Generating..." : "Generate New Path"}
+            {loading ? "Generating..." : "Create Path"}
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
-          <h3 style={{ color: "#999", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", padding: "8px 12px", marginBottom: "4px", letterSpacing: '0.05em' }}>
-            Your Learning Paths
+        <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
+          <h3 style={{ color: "#94a3b8", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", padding: "0 8px 8px", letterSpacing: '0.05em' }}>
+            Your Paths
           </h3>
           {savedGraphs.length === 0 ? (
-            <p style={{ color: "#666", padding: "12px", fontSize: "13px", textAlign: "center", lineHeight: '1.5' }}>
-              No saved paths yet. Create one above!
+            <p style={{ color: "#64748b", padding: "12px 8px", fontSize: "12px", textAlign: "center", lineHeight: '1.5' }}>
+              No paths yet
             </p>
           ) : (
             savedGraphs.map(graph => (
@@ -672,34 +673,34 @@ export default function App() {
                 key={graph.id}
                 onClick={() => loadGraph(graph.id)}
                 style={{
-                  padding: "12px",
-                  margin: "4px 0",
-                  borderRadius: "6px",
-                  background: activeTabId === graph.id ? "#2563eb" : "#2a2a2a",
+                  padding: "10px",
+                  margin: "0 0 6px 0",
+                  borderRadius: "8px",
+                  background: activeTabId === graph.id ? "rgba(59, 130, 246, 0.15)" : "rgba(255, 255, 255, 0.03)",
                   cursor: "pointer",
                   transition: "all 0.2s",
-                  border: activeTabId === graph.id ? "1px solid #3b82f6" : "1px solid transparent",
+                  border: activeTabId === graph.id ? "1px solid rgba(59, 130, 246, 0.3)" : "1px solid transparent",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center"
                 }}
                 onMouseEnter={(e) => {
                   if (activeTabId !== graph.id) {
-                    e.currentTarget.style.background = "#333";
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.06)";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (activeTabId !== graph.id) {
-                    e.currentTarget.style.background = "#2a2a2a";
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
                   }
                 }}
               >
-                <div>
-                  <p style={{ color: "#fff", fontWeight: "500", fontSize: "14px", marginBottom: "4px" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ color: "#fff", fontWeight: "500", fontSize: "13px", marginBottom: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {graph.topic}
                   </p>
-                  <p style={{ color: "#999", fontSize: "12px" }}>
-                    {new Date(graph.timestamp).toLocaleDateString()} • {graph.nodes.filter(n => n.quiz_completed).length}/{graph.nodes.length} completed
+                  <p style={{ color: "#94a3b8", fontSize: "11px" }}>
+                    {graph.nodes.filter(n => n.quiz_completed).length}/{graph.nodes.length} done
                   </p>
                 </div>
                 <button
@@ -710,13 +711,16 @@ export default function App() {
                     }
                   }}
                   style={{
-                    color: "#ef4444",
+                    color: "#64748b",
                     background: "transparent",
                     border: "none",
                     cursor: "pointer",
-                    padding: "4px 8px",
-                    fontSize: "18px"
+                    padding: "4px",
+                    fontSize: "16px",
+                    transition: "color 0.2s"
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = "#ef4444"}
+                  onMouseLeave={(e) => e.currentTarget.style.color = "#64748b"}
                 >
                   ✕
                 </button>
@@ -726,32 +730,31 @@ export default function App() {
         </div>
       </div>
 
-      {/* Collapse/Expand Button */}
       <button
         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
         style={{
           position: "fixed",
-          left: sidebarCollapsed ? "10px" : "310px",
-          top: "20px",
-          width: "40px",
-          height: "40px",
+          left: sidebarCollapsed ? "12px" : "268px",
+          top: "16px",
+          width: "36px",
+          height: "36px",
           borderRadius: "8px",
-          background: "rgba(17, 17, 17, 0.95)",
-          border: "1px solid #333",
-          color: "#fff",
+          background: "rgba(15, 23, 42, 0.95)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          color: "#94a3b8",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: "18px",
+          fontSize: "16px",
           zIndex: 30,
-          transition: "left 0.3s ease"
+          transition: "left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          backdropFilter: "blur(10px)"
         }}
       >
         {sidebarCollapsed ? "→" : "←"}
       </button>
 
-      {/* Main Graph Area */}
       <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh" }}>
         <ForceGraph2D
           width={window.innerWidth}
@@ -761,9 +764,28 @@ export default function App() {
           nodeAutoColorBy={n => (n.unlocked ? "unlocked" : "locked")}
           cooldownTicks={1}
           d3VelocityDecay={4.75}
-          linkWidth={3}
-          linkColor={() => "#4A5568"}
-          linkDirectionalParticles={2}
+          linkWidth={link => {
+            const sourceNode = graphData.nodes.find(n => n.id === (link.source.id || link.source));
+            const targetNode = graphData.nodes.find(n => n.id === (link.target.id || link.target));
+            const bothUnlocked = sourceNode?.unlocked && targetNode?.unlocked;
+            const oneUnlocked = sourceNode?.unlocked || targetNode?.unlocked;
+            return bothUnlocked ? 2 : oneUnlocked ? 1.5 : 1;
+          }}
+          linkColor={link => {
+            const sourceNode = graphData.nodes.find(n => n.id === (link.source.id || link.source));
+            const targetNode = graphData.nodes.find(n => n.id === (link.target.id || link.target));
+            const bothUnlocked = sourceNode?.unlocked && targetNode?.unlocked;
+            const oneUnlocked = sourceNode?.unlocked || targetNode?.unlocked;
+            
+            if (bothUnlocked) return "rgba(59, 130, 246, 0.4)";
+            if (oneUnlocked) return "rgba(100, 116, 139, 0.25)";
+            return "rgba(71, 85, 105, 0.15)";
+          }}
+          linkDirectionalParticles={link => {
+            const sourceNode = graphData.nodes.find(n => n.id === (link.source.id || link.source));
+            const targetNode = graphData.nodes.find(n => n.id === (link.target.id || link.target));
+            return (sourceNode?.unlocked && targetNode?.unlocked) ? 2 : 0;
+          }}
           linkDirectionalParticleWidth={2}
           nodeRelSize={10}
           nodeVal={node => {
@@ -773,198 +795,242 @@ export default function App() {
           nodeCanvasObjectMode={() => 'replace'}
           nodeCanvasObject={(node, ctx, globalScale) => {
             const label = node.label;
-            const fontSize = 12 / globalScale;
-            const nodeRadius = 20 - (node.level * 3);
-            ctx.font = `${fontSize}px Sans-Serif`;
+            const fontSize = 13 / globalScale;
+            const nodeRadius = 18 - (node.level * 2.5);
+            ctx.font = `500 ${fontSize}px Inter, system-ui, sans-serif`;
             ctx.textAlign = "left";
             ctx.textBaseline = "middle";
 
             let opacity = 1;
             if (!node.unlocked && !node.quiz_completed) {
               const distance = nodeDistances[node.id] || 0;
-              opacity = Math.max(0.2, 1 - (distance * 0.25));
+              opacity = Math.max(0.25, 1 - (distance * 0.2));
             }
 
-            let fillColor;
+            let fillColor, strokeColor;
             if (node.quiz_completed) {
-              fillColor = "#22C55E";
+              fillColor = "#10b981";
+              strokeColor = "#059669";
             } else if (node.unlocked) {
-              fillColor = "#1A659E";
+              fillColor = "#3b82f6";
+              strokeColor = "#2563eb";
             } else {
-              fillColor = "#98A2AB";
+              fillColor = "#475569";
+              strokeColor = "#334155";
             }
 
             ctx.globalAlpha = opacity;
+            
+            // Outer glow
+            ctx.shadowBlur = node.unlocked ? 15 : 0;
+            ctx.shadowColor = fillColor;
+            
+            // Main circle
             ctx.fillStyle = fillColor;
             ctx.beginPath();
             ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
             ctx.fill();
+            
+            // Stroke
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 2 / globalScale;
+            ctx.stroke();
 
+            // Inner highlight
+            if (node.unlocked) {
+              ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+              ctx.beginPath();
+              ctx.arc(node.x - nodeRadius * 0.2, node.y - nodeRadius * 0.2, nodeRadius * 0.3, 0, 2 * Math.PI);
+              ctx.fill();
+            }
+
+            // Text
             ctx.fillStyle = "#fff";
-            ctx.fillText(label, node.x + nodeRadius + 2, node.y + 4);
+            ctx.shadowBlur = 3;
+            ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+            ctx.fillText(label, node.x + nodeRadius + 8, node.y);
+            
             ctx.globalAlpha = 1;
+            ctx.shadowBlur = 0;
           }}
           onNodeClick={handleNodeClick}
         />
 
-        {/* Node Detail Panel */}
         {selectedNode && (
           <div
             style={{
               position: "absolute",
-              top: 20,
-              right: 20,
-              width: 340,
-              padding: 20,
-              background: "#111",
+              top: 16,
+              right: 16,
+              width: 360,
+              padding: 0,
+              background: "rgba(15, 23, 42, 0.95)",
               color: "#fff",
               borderRadius: 12,
-              maxHeight: "80vh",
+              maxHeight: "calc(100vh - 120px)",
               overflowY: "auto",
-              boxShadow: "0 10px 40px rgba(0,0,0,0.5)"
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              backdropFilter: "blur(10px)"
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "12px" }}>
-              <h3 style={{ margin: 0, fontSize: "20px" }}>{selectedNode.label}</h3>
-              <button
-                onClick={() => setSelectedNode(null)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#999",
-                  cursor: "pointer",
-                  fontSize: "20px",
-                  padding: "0 4px"
-                }}
-              >
-                ✕
-              </button>
-            </div>
-            <p style={{ marginTop: "10px", lineHeight: "1.6", color: "#ccc" }}>
-              {nodeContent[selectedNode.id]?.content || "Loading content..."}
-            </p>
-            {nodeContent[selectedNode.id]?.quiz && (
-              <>
-                <div style={{
-                  marginTop: "20px",
-                  padding: "12px",
-                  background: "#1a1a1a",
-                  borderRadius: "8px",
-                  borderLeft: "3px solid #3b82f6"
-                }}>
-                  <p style={{ fontWeight: "600", marginBottom: "12px" }}>
-                    {nodeContent[selectedNode.id].quiz.question}
-                  </p>
-                  {nodeContent[selectedNode.id].quiz.options.map((opt, idx) => (
-                    <div key={idx} style={{ marginTop: "10px" }}>
-                      <label style={{
-                        display: "flex",
-                        alignItems: "center",
-                        cursor: score === null ? "pointer" : "default",
-                        padding: "8px",
-                        borderRadius: "6px",
-                        background: selectedAnswer === idx ? "#2a2a2a" : "transparent",
-                        transition: "all 0.2s"
-                      }}>
-                        <input
-                          type="radio"
-                          name="quiz"
-                          value={idx}
-                          checked={selectedAnswer === idx}
-                          onChange={() => setSelectedAnswer(idx)}
-                          disabled={score !== null}
-                          style={{ marginRight: "10px" }}
-                        />
-                        <span style={{ flex: 1 }}>{opt}</span>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {score === null ? (
-              <button
-                onClick={handleQuizSubmit}
-                style={{
-                  marginTop: "15px",
-                  width: "100%",
-                  padding: "12px 20px",
-                  background: "linear-gradient(to right, #3b82f6, #2563eb)",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "#fff",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                  fontSize: "15px"
-                }}
-              >
-                Submit Answer
-              </button>
-            ) : score === 10 ? (
-              <div style={{
-                marginTop: "15px",
-                padding: "16px",
-                background: "rgba(34, 197, 94, 0.15)",
-                borderRadius: "8px",
-                border: "1px solid rgba(34, 197, 94, 0.3)"
-              }}>
-                <p style={{ color: "#22C55E", fontWeight: "bold", margin: 0, marginBottom: "8px", fontSize: "16px" }}>
-                  ✓ Correct!
-                </p>
-                <p style={{ color: "#86efac", margin: 0, fontSize: "14px" }}>
-                  Move on to: {
-                    graphData.links
-                      .filter(l => (l.source.id || l.source) === selectedNode.id)
-                      .map(l => {
-                        const targetId = l.target.id || l.target;
-                        const targetNode = graphData.nodes.find(n => n.id === targetId);
-                        return targetNode?.label;
-                      })
-                      .filter(Boolean)
-                      .join(", ") || "the next topics"
-                  }
-                </p>
-              </div>
-            ) : (
-              <div style={{ marginTop: "15px" }}>
-                <div style={{
-                  padding: "16px",
-                  background: "rgba(239, 68, 68, 0.15)",
-                  borderRadius: "8px",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
-                  marginBottom: "12px"
-                }}>
-                  <p style={{ color: "#EF4444", fontWeight: "bold", margin: 0 }}>
-                    ✗ Incorrect. Try again!
-                  </p>
-                </div>
+            <div style={{ padding: "20px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "600" }}>{selectedNode.label}</h3>
                 <button
-                  onClick={() => {
-                    setScore(null);
-                    setSelectedAnswer(null);
-                  }}
+                  onClick={() => setSelectedNode(null)}
                   style={{
-                    padding: "12px 20px",
+                    background: "transparent",
+                    border: "none",
+                    color: "#64748b",
+                    cursor: "pointer",
+                    fontSize: "20px",
+                    padding: "0 4px",
+                    transition: "color 0.2s"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = "#cbd5e1"}
+                  onMouseLeave={(e) => e.currentTarget.style.color = "#64748b"}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            
+            <div style={{ padding: "20px" }}>
+              <p style={{ margin: 0, lineHeight: "1.6", color: "#cbd5e1", fontSize: "14px" }}>
+                {nodeContent[selectedNode.id]?.content || "Loading content..."}
+              </p>
+              
+              {nodeContent[selectedNode.id]?.quiz && (
+                <div style={{ marginTop: "20px" }}>
+                  <div style={{
+                    padding: "16px",
+                    background: "rgba(59, 130, 246, 0.1)",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(59, 130, 246, 0.2)"
+                  }}>
+                    <p style={{ fontWeight: "600", marginBottom: "14px", fontSize: "14px", color: "#e2e8f0" }}>
+                      {nodeContent[selectedNode.id].quiz.question}
+                    </p>
+                    {nodeContent[selectedNode.id].quiz.options.map((opt, idx) => (
+                      <div key={idx} style={{ marginTop: "8px" }}>
+                        <label style={{
+                          display: "flex",
+                          alignItems: "center",
+                          cursor: score === null ? "pointer" : "default",
+                          padding: "10px 12px",
+                          borderRadius: "8px",
+                          background: selectedAnswer === idx ? "rgba(255, 255, 255, 0.1)" : "transparent",
+                          transition: "all 0.2s",
+                          border: "1px solid " + (selectedAnswer === idx ? "rgba(255, 255, 255, 0.2)" : "transparent"),
+                          fontSize: "13px"
+                        }}>
+                          <input
+                            type="radio"
+                            name="quiz"
+                            value={idx}
+                            checked={selectedAnswer === idx}
+                            onChange={() => setSelectedAnswer(idx)}
+                            disabled={score !== null}
+                            style={{ marginRight: "10px", accentColor: "#3b82f6" }}
+                          />
+                          <span style={{ flex: 1, color: "#cbd5e1" }}>{opt}</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {score === null ? (
+                <button
+                  onClick={handleQuizSubmit}
+                  style={{
+                    marginTop: "16px",
                     width: "100%",
-                    background: "#ef4444",
+                    padding: "12px 20px",
+                    background: "#3b82f6",
                     border: "none",
                     borderRadius: "8px",
                     color: "#fff",
                     cursor: "pointer",
                     fontWeight: "600",
-                    fontSize: "15px"
+                    fontSize: "14px",
+                    transition: "all 0.2s"
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "#2563eb"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "#3b82f6"}
                 >
-                  Retry Quiz
+                  Submit Answer
                 </button>
-              </div>
-            )}
+              ) : score === 10 ? (
+                <div style={{
+                  marginTop: "16px",
+                  padding: "16px",
+                  background: "rgba(16, 185, 129, 0.15)",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(16, 185, 129, 0.3)"
+                }}>
+                  <p style={{ color: "#10b981", fontWeight: "600", margin: 0, marginBottom: "6px", fontSize: "15px" }}>
+                    ✓ Correct!
+                  </p>
+                  <p style={{ color: "#6ee7b7", margin: 0, fontSize: "13px" }}>
+                    Continue to: {
+                      graphData.links
+                        .filter(l => (l.source.id || l.source) === selectedNode.id)
+                        .map(l => {
+                          const targetId = l.target.id || l.target;
+                          const targetNode = graphData.nodes.find(n => n.id === targetId);
+                          return targetNode?.label;
+                        })
+                        .filter(Boolean)
+                        .join(", ") || "next topics"
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div style={{ marginTop: "16px" }}>
+                  <div style={{
+                    padding: "16px",
+                    background: "rgba(239, 68, 68, 0.15)",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    marginBottom: "12px"
+                  }}>
+                    <p style={{ color: "#ef4444", fontWeight: "600", margin: 0, fontSize: "15px" }}>
+                      ✗ Incorrect
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setScore(null);
+                      setSelectedAnswer(null);
+                    }}
+                    style={{
+                      padding: "12px 20px",
+                      width: "100%",
+                      background: "#ef4444",
+                      border: "none",
+                      borderRadius: "8px",
+                      color: "#fff",
+                      cursor: "pointer",
+                      fontWeight: "600",
+                      fontSize: "14px",
+                      transition: "all 0.2s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#dc2626"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "#ef4444"}
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Progress Bar at Bottom */}
       {graphData.nodes.length > 0 && (
         <div style={{
           position: "fixed",
@@ -972,35 +1038,37 @@ export default function App() {
           left: 0,
           right: 0,
           height: "60px",
-          background: "rgba(17, 17, 17, 0.95)",
-          borderTop: "1px solid #333",
+          background: "rgba(15, 23, 42, 0.95)",
+          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
           display: "flex",
           alignItems: "center",
           padding: "0 24px",
-          zIndex: 25
+          zIndex: 25,
+          backdropFilter: "blur(10px)"
         }}>
           <div style={{ flex: 1, marginRight: "20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-              <span style={{ color: "#999", fontSize: "13px", fontWeight: "600" }}>
-                Learning Progress
+              <span style={{ color: "#94a3b8", fontSize: "12px", fontWeight: "600" }}>
+                Progress
               </span>
-              <span style={{ color: "#fff", fontSize: "13px", fontWeight: "600" }}>
+              <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "600" }}>
                 {completedNodes} / {totalNodes} ({Math.round(progressPercent)}%)
               </span>
             </div>
             <div style={{
               width: "100%",
-              height: "8px",
-              background: "#2a2a2a",
-              borderRadius: "4px",
+              height: "6px",
+              background: "rgba(255, 255, 255, 0.1)",
+              borderRadius: "3px",
               overflow: "hidden"
             }}>
               <div style={{
                 width: `${progressPercent}%`,
                 height: "100%",
                 background: getProgressColor(),
-                transition: "all 0.5s ease",
-                borderRadius: "4px"
+                transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+                borderRadius: "3px",
+                boxShadow: `0 0 10px ${getProgressColor()}`
               }} />
             </div>
           </div>
