@@ -52,11 +52,11 @@ function AnimatedGlobe() {
     const nodes = [];
     const connections = [];
     const radius = 150;
-    const latitudes = 12;
-    const longitudes = 20;
+    const latitudes = 8;
+    const longitudes = 12;
     let nodeId = 0;
     
-    for (let lat = 0; lat < latitudes; lat++) {
+    for (let lat = 0; lat <= latitudes; lat++) {
       const theta = (lat / latitudes) * Math.PI;
       const y = -radius * Math.cos(theta);
       const ringRadius = radius * Math.sin(theta);
@@ -73,7 +73,7 @@ function AnimatedGlobe() {
       const nextLon = nodes.find(n => n.lat === node.lat && n.lon === (node.lon + 1) % longitudes);
       if (nextLon) connections.push({ from: i, to: nextLon.id });
       
-      if (node.lat < latitudes - 1) {
+      if (node.lat < latitudes) {
         const nextLat = nodes.find(n => n.lat === node.lat + 1 && n.lon === node.lon);
         if (nextLat) connections.push({ from: i, to: nextLat.id });
       }
@@ -97,15 +97,15 @@ function AnimatedGlobe() {
 
   return (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <svg width="100%" height="100%" viewBox="-400 -300 800 600" className="opacity-25">
+      <svg width="100%" height="120%" viewBox="-500 -400 1000 900" className="opacity-30">
         {globeData.connections.map((conn, idx) => {
           const from = rotatedNodes[conn.from];
           const to = rotatedNodes[conn.to];
           if (from.z > -150 && to.z > -150) {
             const avgZ = (from.z + to.z) / 2;
             const depthFactor = (avgZ + 150) / 300;
-            const opacity = 0.15 + depthFactor * 0.25;
-            const strokeWidth = 0.8 + depthFactor * 0.8;
+            const opacity = 0.25 + depthFactor * 0.45;
+            const strokeWidth = 1.5 + depthFactor * 1.5;
             return (
               <line
                 key={`conn-${idx}`}
@@ -116,19 +116,21 @@ function AnimatedGlobe() {
                 stroke="#1A659E"
                 strokeWidth={strokeWidth}
                 opacity={opacity}
+                strokeLinecap="round"
               />
             );
           }
           return null;
         })}
         {sortedNodes.map(node => {
+          if (node.z < -100) return null;
           const depthFactor = (node.z + 150) / 300;
-          const depthOpacity = 0.3 + depthFactor * 0.7;
-          const size = 2.5 + node.scale * 2;
-          const brightness = 0.6 + depthFactor * 0.4;
+          const depthOpacity = 0.4 + depthFactor * 0.6;
+          const size = 3 + node.scale * 2.5;
+          const brightness = 0.7 + depthFactor * 0.3;
           return (
             <g key={node.id}>
-              <circle cx={node.screenX} cy={node.screenY} r={size + 0.8} fill="#1A659E" opacity={depthOpacity * 0.3} />
+              <circle cx={node.screenX} cy={node.screenY} r={size + 1.2} fill="#1A659E" opacity={depthOpacity * 0.25} />
               <circle cx={node.screenX} cy={node.screenY} r={size} fill="#1A659E" opacity={depthOpacity}
                 style={{ filter: `brightness(${brightness})` }} />
             </g>
@@ -313,96 +315,58 @@ export default function App() {
     }
   };
 
-  const fetchGraphDataFallback = async () => {
-    return {
-      nodes: [
-        { id: "AI", label: "Artificial Intelligence", level: 0, unlocked: true, quiz_completed: false },
-        { id: "ML", label: "Machine Learning", level: 1, unlocked: true, quiz_completed: false },
-        { id: "Stats", label: "Statistics & Probability", level: 1, unlocked: false, quiz_completed: false },
-        { id: "DL", label: "Deep Learning", level: 2, unlocked: false, quiz_completed: false },
-        { id: "DS", label: "Data Structures & Algos", level: 2, unlocked: false, quiz_completed: false },
-        { id: "Clust", label: "Clustering & Regressions", level: 2, unlocked: false, quiz_completed: false },
-        { id: "NN", label: "Neural Networks", level: 3, unlocked: false, quiz_completed: false },
-        { id: "CV", label: "Computer Vision", level: 3, unlocked: false, quiz_completed: false },
-        { id: "NLP", label: "Natural Language Processing", level: 3, unlocked: false, quiz_completed: false },
-        { id: "RL", label: "Reinforcement Learning", level: 3, unlocked: false, quiz_completed: false },
-        { id: "GAN", label: "Generative Adversarial Nets", level: 4, unlocked: false, quiz_completed: false },
-        { id: "CNN", label: "Convolutional Networks", level: 4, unlocked: false, quiz_completed: false },
-        { id: "RNN", label: "Recurrent Networks", level: 4, unlocked: false, quiz_completed: false },
-        { id: "Transf", label: "Transformers (Attention)", level: 4, unlocked: false, quiz_completed: false },
-        { id: "Agent", label: "AI Agents & Planning", level: 4, unlocked: false, quiz_completed: false },
-        { id: "Ethics", label: "AI Ethics & Governance", level: 4, unlocked: false, quiz_completed: false },
-      ],
-      links: [
-        { source: "AI", target: "ML" },
-        { source: "AI", target: "Stats" },
-        { source: "ML", target: "DL" },
-        { source: "Stats", target: "DL" },
-        { source: "ML", target: "DS" },
-        { source: "DL", target: "NN" },
-        { source: "DL", target: "CV" },
-        { source: "DL", target: "NLP" },
-        { source: "DL", target: "RL" },
-        { source: "ML", target: "Clust" },
-        { source: "NN", target: "GAN" },
-        { source: "CV", target: "CNN" },
-        { source: "NLP", target: "RNN" },
-        { source: "RNN", target: "Transf" },
-        { source: "RL", target: "Agent" },
-        { source: "Agent", target: "Ethics" },
-        { source: "Transf", target: "Ethics" },
-        { source: "GAN", target: "Ethics" }
-      ],
-      nodeContent: {
-        AI: {
-          content: "Artificial Intelligence (AI) refers to the simulation of human intelligence in machines that are programmed to think and learn. AI encompasses various approaches including rule-based systems, machine learning, and neural networks.",
-          quiz: {
-            question: "What is Artificial Intelligence?",
-            options: [
-              "A system that performs logical reasoning only",
-              "A system that mimics human-like decision making",
-              "A program that runs only on quantum computers",
-              "A database for large-scale analytics"
-            ],
-            answer: 1
-          }
+  const fetchGraphDataFromAPI = async (topicName) => {
+    try {
+      const response = await fetch('https://sphere-backend-gsoo.onrender.com/api/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        ML: {
-          content: "Machine Learning is a subset of AI that focuses on the development of algorithms and statistical models that enable computers to improve their performance on tasks through experience. Instead of being explicitly programmed, ML systems learn patterns from data.",
-          quiz: {
-            question: "Which of the following best describes Machine Learning?",
-            options: [
-              "Manually programmed rule-based systems",
-              "A subset of AI that learns from data",
-              "A branch of physics studying motion",
-              "A graphics rendering technique"
-            ],
-            answer: 1
-          }
-        },
-        DL: {
-          content: "Deep Learning is a specialized subset of machine learning that uses neural networks with multiple layers (deep neural networks) to learn hierarchical representations of data. Deep learning has revolutionized fields like computer vision and natural language processing.",
-          quiz: {
-            question: "Deep Learning mainly uses:",
-            options: [
-              "Linear regression models",
-              "Neural networks with many layers",
-              "Genetic algorithms",
-              "Symbolic logic"
-            ],
-            answer: 1
-          }
-        }
+        body: JSON.stringify({ url: topicName })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
       }
-    };
+
+      const result = await response.json();
+      
+      // The API should return data with nodes, links, and nodeContent
+      // Transform the quiz format from array to single quiz object for compatibility
+      const transformedNodeContent = {};
+      if (result.nodeContent) {
+        Object.keys(result.nodeContent).forEach(nodeId => {
+          const nodeData = result.nodeContent[nodeId];
+          transformedNodeContent[nodeId] = {
+            content: nodeData.content,
+            quiz: nodeData.quiz && nodeData.quiz.length > 0 ? nodeData.quiz[0] : null
+          };
+        });
+      }
+
+      return {
+        nodes: result.nodes || [],
+        links: result.links || [],
+        nodeContent: transformedNodeContent
+      };
+    } catch (error) {
+      console.error('Error fetching from API:', error);
+      throw error;
+    }
   };
 
   const handleStartLearning = async () => {
     if (!topic.trim()) return;
     setLoading(true);
+    setError(null);
 
     try {
-      const data = await fetchGraphDataFallback();
+      const data = await fetchGraphDataFromAPI(topic);
+      
+      if (!data.nodes || data.nodes.length === 0) {
+        throw new Error('No data received from API');
+      }
+
       const laidOut = solarSystemLayout(data.nodes, data.links);
       setGraphData({ nodes: laidOut, links: data.links });
       setNodeContent(data.nodeContent);
@@ -410,7 +374,7 @@ export default function App() {
       setView("graph");
     } catch (error) {
       console.error('Error generating graph:', error);
-      alert('Failed to generate graph. Please try again.');
+      setError(`Failed to generate graph: ${error.message}. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -566,55 +530,50 @@ export default function App() {
 
   if (view === "intro") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center p-4 relative overflow-hidden" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex relative overflow-hidden" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
         {error && <ErrorToast message={error} onClose={() => setError(null)} />}
-        <AnimatedGlobe />
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full shadow-2xl border border-white/20 relative z-10">
-          <h1 className="text-4xl font-bold text-white mb-2 text-center" style={{ letterSpacing: '-0.02em' }}>
-            StudySphere
-          </h1>
-          <p className="text-white/80 mb-6 text-center" style={{ fontSize: '15px', lineHeight: '1.6' }}>
-            Enter any topic to generate an interactive learning path!
-          </p>
-          <div>
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
-              placeholder="e.g., Machine Learning, Quantum Physics..."
-              className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 mb-4"
-              style={{ fontSize: '15px' }}
-            />
-            <button
-              onClick={handleStartLearning}
-              disabled={!topic.trim() || loading}
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-lg font-semibold hover:from-cyan-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              style={{ fontSize: '15px', letterSpacing: '-0.01em' }}
-            >
-              {loading ? "Generating..." : "Generate Learning Path"}
-            </button>
-          </div>
+        
+        {/* Left Side - Content */}
+        <div className="w-1/2 flex items-center justify-center p-12 relative z-10">
+          <div className="max-w-lg w-full">
+            <h1 className="text-5xl font-bold text-white mb-3" style={{ letterSpacing: '-0.02em' }}>
+              StudySphere
+            </h1>
+            <p className="text-white/80 mb-8 text-lg" style={{ lineHeight: '1.6' }}>
+              Enter any topic to generate an interactive learning path!
+            </p>
+            <div>
+              <input
+                type="text"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
+                placeholder="e.g., Machine Learning, Quantum Physics..."
+                className="w-full px-5 py-4 rounded-xl bg-white/20 text-white placeholder-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 mb-4"
+                style={{ fontSize: '16px' }}
+              />
+              <button
+                onClick={handleStartLearning}
+                disabled={!topic.trim() || loading}
+                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-4 rounded-xl font-semibold hover:from-cyan-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                style={{ fontSize: '16px', letterSpacing: '-0.01em' }}
+              >
+                {loading ? "Generating..." : "Generate Learning Path"}
+              </button>
+            </div>
 
-          {savedGraphs.length > 0 && (
-            <button
-              onClick={() => setView("graph")}
-              className="mt-6 w-full text-left opacity-0 hover:opacity-100 transition-opacity duration-300"
-            >
-              <div>
-                <h2 className="text-lg font-semibold text-white mb-3">Your Learning Paths</h2>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+            {savedGraphs.length > 0 && (
+              <div className="mt-8 opacity-0 hover:opacity-100 transition-opacity duration-300">
+                <h2 className="text-xl font-semibold text-white mb-4">Your Learning Paths</h2>
+                <div className="space-y-2 max-h-80 overflow-y-auto">
                   {savedGraphs.map(graph => (
                     <div 
                       key={graph.id}
-                      className="bg-white/10 rounded-lg p-3 flex items-center justify-between hover:bg-white/20 transition-all cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        loadGraph(graph.id);
-                      }}
+                      className="bg-white/10 rounded-lg p-4 flex items-center justify-between hover:bg-white/20 transition-all cursor-pointer backdrop-blur-sm"
+                      onClick={() => loadGraph(graph.id)}
                     >
                       <div className="flex-1">
-                        <p className="text-white font-medium">{graph.topic}</p>
+                        <p className="text-white font-medium text-base">{graph.topic}</p>
                         <p className="text-white/60 text-sm">
                           {new Date(graph.timestamp).toLocaleDateString()}
                         </p>
@@ -626,7 +585,7 @@ export default function App() {
                             deleteGraph(graph.id);
                           }
                         }}
-                        className="text-red-400 hover:text-red-300 ml-2 px-2"
+                        className="text-red-400 hover:text-red-300 ml-3 px-2"
                       >
                         ✕
                       </button>
@@ -634,8 +593,13 @@ export default function App() {
                   ))}
                 </div>
               </div>
-            </button>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* Right Side - Globe */}
+        <div className="w-1/2 relative flex items-center justify-center" style={{ transform: 'translateY(10%)' }}>
+          <AnimatedGlobe />
         </div>
       </div>
     );
