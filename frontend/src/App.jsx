@@ -311,24 +311,26 @@ export default function App() {
       // Stage 1: Generate structure
       setLoadingStage("structure");
       setLoadingProgress(0);
-
+  
       const structureResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-structure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic: topicName })
       });
-
+  
       if (!structureResponse.ok) {
         throw new Error(`Structure generation failed: ${structureResponse.status}`);
       }
-
+  
       const structureData = await structureResponse.json();
       setLoadingProgress(100);
-
+  
+      console.log("Structure data:", structureData);
+  
       // Stage 2: Generate content
       setLoadingStage("content");
       setLoadingProgress(0);
-
+  
       const contentResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -337,18 +339,20 @@ export default function App() {
           nodes: structureData.nodes 
         })
       });
-
+  
       if (!contentResponse.ok) {
         throw new Error(`Content generation failed: ${contentResponse.status}`);
       }
-
+  
       const contentData = await contentResponse.json();
       setLoadingProgress(100);
-
+  
+      console.log("Content data:", contentData);
+  
       // Stage 3: Generate quizzes
       setLoadingStage("quizzes");
       setLoadingProgress(0);
-
+  
       const quizzesResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-quizzes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -358,23 +362,35 @@ export default function App() {
           content: contentData.nodeContent
         })
       });
-
+  
       if (!quizzesResponse.ok) {
         throw new Error(`Quiz generation failed: ${quizzesResponse.status}`);
       }
-
+  
       const quizzesData = await quizzesResponse.json();
       setLoadingProgress(100);
-
-      // Combine all data
+  
+      console.log("Quizzes data:", quizzesData);
+  
+      // Combine all data - USE ALL NODE IDS FROM STRUCTURE
       const finalNodeContent = {};
-      Object.keys(contentData.nodeContent).forEach(nodeId => {
+      
+      // Iterate through ALL nodes from structure
+      structureData.nodes.forEach(node => {
+        const nodeId = node.id;
+        
         finalNodeContent[nodeId] = {
-          content: contentData.nodeContent[nodeId],
-          quiz: quizzesData.nodeQuizzes[nodeId]
+          content: contentData.nodeContent?.[nodeId] || `Content for ${node.label} is being generated...`,
+          quiz: quizzesData.nodeQuizzes?.[nodeId] || {
+            question: `What is ${node.label}?`,
+            options: ["Option A", "Option B", "Option C", "Option D"],
+            answer: 0
+          }
         };
       });
-
+  
+      console.log("Final node content:", finalNodeContent);
+  
       return {
         nodes: structureData.nodes || [],
         links: structureData.links || [],
