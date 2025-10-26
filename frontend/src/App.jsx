@@ -20,7 +20,7 @@ function solarSystemLayout(nodes, links) {
     adjacency[node.id] = [];
     inDegree[node.id] = 0;
   });
-  
+
   links.forEach(link => {
     const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
     const targetId = typeof link.target === 'object' ? link.target.id : link.target;
@@ -85,11 +85,11 @@ export default function App() {
         // Option 1: Fetch from a URL (e.g., if hosted on your server)
         // const response = await fetch('/graphData.json');
         // const data = await response.json();
-        
+
         // Option 2: For now, we'll use the hardcoded fallback
         // Replace this with actual fetch when you have the JSON file accessible
         const data = await fetchGraphDataFallback();
-        
+
         const laidOut = solarSystemLayout(data.nodes, data.links);
         setGraphData({ nodes: laidOut, links: data.links });
         setNodeContent(data.nodeContent);
@@ -106,7 +106,6 @@ export default function App() {
   const fetchGraphDataFallback = async () => {
     // This simulates loading from JSON
     // In production, replace this with: const response = await fetch('/graphData.json');
-    console.log("Using fallback graph data");
     return {
       nodes: [
         { id: "AI", label: "Artificial Intelligence", level: 0, unlocked: true, quiz_completed: false },
@@ -192,9 +191,9 @@ export default function App() {
 
   const handleStartLearning = async () => {
     if (!topic.trim()) return;
-    
+
     setLoading(true);
-    
+
     try {
       // TODO: When connecting to backend, replace with:
       // const response = await fetch('https://your-app.vercel.app/api/generate-graph', {
@@ -206,9 +205,9 @@ export default function App() {
       // const laidOut = solarSystemLayout(data.nodes, data.links);
       // setGraphData({ nodes: laidOut, links: data.links });
       // setNodeContent(data.nodeContent);
-      
+
       setView("graph");
-      
+
     } catch (error) {
       console.error('Error generating graph:', error);
       alert('Failed to generate graph. Please try again.');
@@ -224,30 +223,16 @@ export default function App() {
     setSelectedAnswer(null);
   };
 
-  const handleQuizSubmit = () => {
-    if (selectedAnswer === null) {
-      alert("Please select an answer!");
-      return;
-    }
-    
-    const currentQuiz = nodeContent[selectedNode.id]?.quiz;
-    const isCorrect = currentQuiz && selectedAnswer === currentQuiz.answer;
-    
-    setScore(isCorrect ? 10 : 0);
-    
-    if (isCorrect) {
-      unlockNodes(selectedNode, 10);
-    }
-  };
-
+  // Define unlockNodes function here, before it's called in handleQuizSubmit
   const unlockNodes = (parent, score) => {
-    const threshold = 0;
-    
+    const threshold = 0; // Keeping threshold here or within the function is fine
+
     const nodeParents = {};
     graphData.nodes.forEach(n => {
       nodeParents[n.id] = [];
     });
-    
+
+    // Build the parent map
     graphData.links.forEach(l => {
       const sourceId = l.source.id || l.source;
       const targetId = l.target.id || l.target;
@@ -255,31 +240,36 @@ export default function App() {
         nodeParents[targetId].push(sourceId);
       }
     });
-    
+
+    // 1. Mark the completed node (parent)
     const nodesWithCompletion = graphData.nodes.map(n => ({
       ...n,
       quiz_completed: n.id === parent.id ? true : n.quiz_completed
     }));
-    
+
+    // 2. Find immediate children of the completed node
     const childIds = graphData.links
       .filter(l => (l.source.id || l.source) === parent.id)
       .map(l => l.target.id || l.target);
 
+    // 3. Update nodes, checking if children should unlock
     const updatedNodes = nodesWithCompletion.map(n => {
       const isChild = childIds.includes(n.id);
-      
+
       let shouldUnlock = false;
       if (isChild && !n.unlocked && score >= threshold) {
         const parents = nodeParents[n.id];
-        
+
+        // Check if ALL parents of the current node (n) are completed
         const allParentsCompleted = parents.every(parentId => {
           const parentNode = nodesWithCompletion.find(node => node.id === parentId);
+          // Check if parentNode exists and its quiz is completed
           return parentNode && parentNode.quiz_completed;
         });
-        
+
         shouldUnlock = allParentsCompleted;
       }
-      
+
       return {
         id: n.id,
         label: n.label,
@@ -300,14 +290,68 @@ export default function App() {
       nodes: updatedNodes,
       links: cleanedLinks,
     });
+  }; // END of unlockNodes function
+
+  const handleQuizSubmit = () => {
+    if (selectedAnswer === null) {
+      alert("Please select an answer!");
+      return;
+    }
+
+    const currentQuiz = nodeContent[selectedNode.id]?.quiz;
+    const isCorrect = currentQuiz && selectedAnswer === currentQuiz.answer;
+
+    setScore(isCorrect ? 10 : 0);
+
+    if (isCorrect) {
+      unlockNodes(selectedNode, 10);
+    }
   };
+
+  const calculateNodeDistances = () => {
+    // Calculate the shortest distance from each locked node to the nearest unlocked node
+    const distances = {};
+
+    graphData.nodes.forEach(node => {
+      if (node.unlocked) {
+        distances[node.id] = 0;
+      } else {
+        distances[node.id] = Infinity;
+      }
+    });
+
+    // BFS to find shortest distances
+    let changed = true;
+    while (changed) {
+      changed = false;
+      graphData.links.forEach(link => {
+        const sourceId = link.source.id || link.source;
+        const targetId = link.target.id || link.target;
+
+        // Check both directions
+        if (distances[sourceId] + 1 < distances[targetId]) {
+          distances[targetId] = distances[sourceId] + 1;
+          changed = true;
+        }
+        if (distances[targetId] + 1 < distances[sourceId]) {
+          distances[sourceId] = distances[targetId] + 1;
+          changed = true;
+        }
+      });
+    }
+
+    return distances;
+  };
+
+  const nodeDistances = useMemo(() => calculateNodeDistances(), [graphData]);
+  // The original misplaced logic is now REMOVED from here.
 
   if (view === "intro") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center p-4">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full shadow-2xl border border-white/20">
           <h1 className="text-4xl font-bold text-white mb-2 text-center">
-            Knowledge Graph Explorer
+            StudySphere
           </h1>
           <p className="text-white/80 mb-6 text-center">
             Enter any topic to generate an interactive learning path!
@@ -400,7 +444,15 @@ export default function App() {
           const fontSize = 12 / globalScale;
           const nodeRadius = 20 - (node.level * 3);
           ctx.font = `${fontSize}px Sans-Serif`;
-          
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+
+          let opacity = 1;
+          if (!node.unlocked && !node.quiz_completed) {
+            const distance = nodeDistances[node.id] || 0;
+            opacity = Math.max(0.2, 1 - (distance * 0.25));
+          }
+
           let fillColor;
           if (node.quiz_completed) {
             fillColor = "#22C55E";
@@ -409,12 +461,17 @@ export default function App() {
           } else {
             fillColor = "#98A2AB";
           }
-          
+
+          ctx.globalAlpha = opacity;
           ctx.fillStyle = fillColor;
           ctx.beginPath();
           ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
           ctx.fill();
+
+          // Draw label with same opacity
+          ctx.fillStyle = "#fff";
           ctx.fillText(label, node.x + nodeRadius + 2, node.y + 4);
+          ctx.globalAlpha = 1; // Reset opacity
         }}
         onNodeClick={handleNodeClick}
       />
@@ -457,7 +514,7 @@ export default function App() {
               ))}
             </>
           )}
-          
+
           {score === null ? (
             <button onClick={handleQuizSubmit} style={{ marginTop: "15px", padding: "10px 20px", background: "#3b82f6", border: "none", borderRadius: "6px", color: "#fff", cursor: "pointer", fontWeight: "600" }}>Submit Quiz</button>
           ) : score === 10 ? (
@@ -481,7 +538,7 @@ export default function App() {
               <p style={{ color: "#EF4444", fontWeight: "bold", marginBottom: "10px" }}>
                 ✗ Incorrect! Try again.
               </p>
-              <button 
+              <button
                 onClick={() => {
                   setScore(null);
                   setSelectedAnswer(null);
