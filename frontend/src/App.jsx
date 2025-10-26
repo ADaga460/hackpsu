@@ -982,46 +982,60 @@ export default function App() {
                 {nodeContent[selectedNode.id]?.content || "Loading content..."}
               </p>
               
-              {nodeContent[selectedNode.id]?.quiz && nodeContent[selectedNode.id].quiz.options && (
-                <div style={{ marginTop: "20px" }}>
-                  <div style={{
-                    padding: "16px",
-                    background: "rgba(59, 130, 246, 0.1)",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(59, 130, 246, 0.2)"
-                  }}>
-                    <p style={{ fontWeight: "600", marginBottom: "14px", fontSize: "14px", color: "#e2e8f0" }}>
-                      {nodeContent[selectedNode.id].quiz.question}
-                    </p>
-                    {nodeContent[selectedNode.id].quiz.options.map((opt, idx) => (
-                      <div key={idx} style={{ marginTop: "8px" }}>
-                        <label style={{
-                          display: "flex",
-                          alignItems: "center",
-                          cursor: score === null ? "pointer" : "default",
-                          padding: "10px 12px",
-                          borderRadius: "8px",
-                          background: selectedAnswer === idx ? "rgba(255, 255, 255, 0.1)" : "transparent",
-                          transition: "all 0.2s",
-                          border: "1px solid " + (selectedAnswer === idx ? "rgba(255, 255, 255, 0.2)" : "transparent"),
-                          fontSize: "13px"
-                        }}>
-                          <input
-                            type="radio"
-                            name="quiz"
-                            value={idx}
-                            checked={selectedAnswer === idx}
-                            onChange={() => setSelectedAnswer(idx)}
-                            disabled={score !== null}
-                            style={{ marginRight: "10px", accentColor: "#3b82f6" }}
-                          />
-                          <span style={{ flex: 1, color: "#cbd5e1" }}>{opt}</span>
-                        </label>
-                      </div>
-                    ))}
+              {(() => {
+                const quiz = nodeContent[selectedNode.id]?.quiz;
+                console.log("Quiz data for node:", selectedNode.id, quiz);
+                
+                if (!quiz) {
+                  return <p style={{ marginTop: "20px", color: "#64748b", fontSize: "13px" }}>No quiz available</p>;
+                }
+                
+                if (!quiz.question || !quiz.options || !Array.isArray(quiz.options)) {
+                  console.error("Invalid quiz structure:", quiz);
+                  return <p style={{ marginTop: "20px", color: "#ef4444", fontSize: "13px" }}>Quiz data is malformed</p>;
+                }
+                
+                return (
+                  <div style={{ marginTop: "20px" }}>
+                    <div style={{
+                      padding: "16px",
+                      background: "rgba(59, 130, 246, 0.1)",
+                      borderRadius: "10px",
+                      border: "1px solid rgba(59, 130, 246, 0.2)"
+                    }}>
+                      <p style={{ fontWeight: "600", marginBottom: "14px", fontSize: "14px", color: "#e2e8f0" }}>
+                        {quiz.question}
+                      </p>
+                      {quiz.options.map((opt, idx) => (
+                        <div key={idx} style={{ marginTop: "8px" }}>
+                          <label style={{
+                            display: "flex",
+                            alignItems: "center",
+                            cursor: score === null ? "pointer" : "default",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            background: selectedAnswer === idx ? "rgba(255, 255, 255, 0.1)" : "transparent",
+                            transition: "all 0.2s",
+                            border: "1px solid " + (selectedAnswer === idx ? "rgba(255, 255, 255, 0.2)" : "transparent"),
+                            fontSize: "13px"
+                          }}>
+                            <input
+                              type="radio"
+                              name="quiz"
+                              value={idx}
+                              checked={selectedAnswer === idx}
+                              onChange={() => setSelectedAnswer(idx)}
+                              disabled={score !== null}
+                              style={{ marginRight: "10px", accentColor: "#3b82f6" }}
+                            />
+                            <span style={{ flex: 1, color: "#cbd5e1" }}>{opt}</span>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {score === null ? (
                 <button
