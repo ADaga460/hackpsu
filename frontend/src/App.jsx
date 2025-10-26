@@ -1,17 +1,103 @@
 import React, { useState, useMemo, useEffect } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 
-// Import the JSON data - place graphData.json in the same directory as this file
-// For local development, you can use: import graphDataJson from './graphData.json';
-// Or fetch it from a URL
+// Animated Brain Component for Intro Screen
+function AnimatedBrain() {
+  const [time, setTime] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTime(t => t + 0.02);
+    }, 30);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Create brain-like node pattern
+  const brainNodes = useMemo(() => {
+    const nodes = [];
+    const nodeCount = 40;
+    
+    // Create nodes in a brain-like elliptical pattern
+    for (let i = 0; i < nodeCount; i++) {
+      const angle = (i / nodeCount) * Math.PI * 2;
+      const layer = Math.floor(i / 8);
+      const radius = 80 + layer * 30;
+      
+      // Make it brain-shaped (elliptical, wider than tall)
+      const x = Math.cos(angle) * radius * 1.3;
+      const y = Math.sin(angle) * radius * 0.8;
+      
+      nodes.push({
+        id: i,
+        baseX: x,
+        baseY: y,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.8 + Math.random() * 0.4
+      });
+    }
+    return nodes;
+  }, []);
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
+      <svg width="400" height="300" viewBox="-250 -150 500 300">
+        {brainNodes.map((node, idx) => {
+          // Sinusoidal motion for spinning effect
+          const offsetX = Math.sin(time * node.speed + node.phase) * 15;
+          const offsetY = Math.cos(time * node.speed * 0.7 + node.phase) * 10;
+          const x = node.baseX + offsetX;
+          const y = node.baseY + offsetY;
+          
+          // Opacity varies with motion
+          const opacity = 0.4 + Math.sin(time * node.speed + node.phase) * 0.3;
+          
+          return (
+            <circle
+              key={node.id}
+              cx={x}
+              cy={y}
+              r={3 + Math.sin(time + node.phase) * 1}
+              fill="#1A659E"
+              opacity={opacity}
+            />
+          );
+        })}
+        
+        {/* Optional: Add connecting lines between nearby nodes */}
+        {brainNodes.map((node, idx) => {
+          if (idx % 3 !== 0) return null; // Only draw some connections
+          const nextNode = brainNodes[(idx + 1) % brainNodes.length];
+          
+          const x1 = node.baseX + Math.sin(time * node.speed + node.phase) * 15;
+          const y1 = node.baseY + Math.cos(time * node.speed * 0.7 + node.phase) * 10;
+          const x2 = nextNode.baseX + Math.sin(time * nextNode.speed + nextNode.phase) * 15;
+          const y2 = nextNode.baseY + Math.cos(time * nextNode.speed * 0.7 + nextNode.phase) * 10;
+          
+          return (
+            <line
+              key={`line-${idx}`}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#1A659E"
+              strokeWidth="1"
+              opacity="0.15"
+            />
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
 
 function solarSystemLayout(nodes, links) {
   const levelRadius = {
-    0: 0,      // Center (sun)
-    1: 250,    // First orbit
-    2: 500,    // Second orbit
-    3: 750,    // Third orbit
-    4: 1000    // Fourth orbit
+    0: 0,
+    1: 250,
+    2: 500,
+    3: 750,
+    4: 1000
   };
 
   const adjacency = {};
@@ -78,18 +164,10 @@ export default function App() {
   const [score, setScore] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
 
-  // Load the JSON data on component mount
   useEffect(() => {
     const loadGraphData = async () => {
       try {
-        // Option 1: Fetch from a URL (e.g., if hosted on your server)
-        // const response = await fetch('/graphData.json');
-        // const data = await response.json();
-
-        // Option 2: For now, we'll use the hardcoded fallback
-        // Replace this with actual fetch when you have the JSON file accessible
         const data = await fetchGraphDataFallback();
-
         const laidOut = solarSystemLayout(data.nodes, data.links);
         setGraphData({ nodes: laidOut, links: data.links });
         setNodeContent(data.nodeContent);
@@ -102,10 +180,7 @@ export default function App() {
     loadGraphData();
   }, []);
 
-  // Fallback function - replace with actual fetch
   const fetchGraphDataFallback = async () => {
-    // This simulates loading from JSON
-    // In production, replace this with: const response = await fetch('/graphData.json');
     return {
       nodes: [
         { id: "AI", label: "Artificial Intelligence", level: 0, unlocked: true, quiz_completed: false },
@@ -191,23 +266,10 @@ export default function App() {
 
   const handleStartLearning = async () => {
     if (!topic.trim()) return;
-
     setLoading(true);
 
     try {
-      // TODO: When connecting to backend, replace with:
-      // const response = await fetch('https://your-app.vercel.app/api/generate-graph', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ topic: topic })
-      // });
-      // const data = await response.json();
-      // const laidOut = solarSystemLayout(data.nodes, data.links);
-      // setGraphData({ nodes: laidOut, links: data.links });
-      // setNodeContent(data.nodeContent);
-
       setView("graph");
-
     } catch (error) {
       console.error('Error generating graph:', error);
       alert('Failed to generate graph. Please try again.');
@@ -223,16 +285,13 @@ export default function App() {
     setSelectedAnswer(null);
   };
 
-  // Define unlockNodes function here, before it's called in handleQuizSubmit
   const unlockNodes = (parent, score) => {
-    const threshold = 0; // Keeping threshold here or within the function is fine
-
+    const threshold = 0;
     const nodeParents = {};
     graphData.nodes.forEach(n => {
       nodeParents[n.id] = [];
     });
 
-    // Build the parent map
     graphData.links.forEach(l => {
       const sourceId = l.source.id || l.source;
       const targetId = l.target.id || l.target;
@@ -241,32 +300,24 @@ export default function App() {
       }
     });
 
-    // 1. Mark the completed node (parent)
     const nodesWithCompletion = graphData.nodes.map(n => ({
       ...n,
       quiz_completed: n.id === parent.id ? true : n.quiz_completed
     }));
 
-    // 2. Find immediate children of the completed node
     const childIds = graphData.links
       .filter(l => (l.source.id || l.source) === parent.id)
       .map(l => l.target.id || l.target);
 
-    // 3. Update nodes, checking if children should unlock
     const updatedNodes = nodesWithCompletion.map(n => {
       const isChild = childIds.includes(n.id);
-
       let shouldUnlock = false;
       if (isChild && !n.unlocked && score >= threshold) {
         const parents = nodeParents[n.id];
-
-        // Check if ALL parents of the current node (n) are completed
         const allParentsCompleted = parents.every(parentId => {
           const parentNode = nodesWithCompletion.find(node => node.id === parentId);
-          // Check if parentNode exists and its quiz is completed
           return parentNode && parentNode.quiz_completed;
         });
-
         shouldUnlock = allParentsCompleted;
       }
 
@@ -290,7 +341,7 @@ export default function App() {
       nodes: updatedNodes,
       links: cleanedLinks,
     });
-  }; // END of unlockNodes function
+  };
 
   const handleQuizSubmit = () => {
     if (selectedAnswer === null) {
@@ -309,7 +360,6 @@ export default function App() {
   };
 
   const calculateNodeDistances = () => {
-    // Calculate the shortest distance from each locked node to the nearest unlocked node
     const distances = {};
 
     graphData.nodes.forEach(node => {
@@ -320,7 +370,6 @@ export default function App() {
       }
     });
 
-    // BFS to find shortest distances
     let changed = true;
     while (changed) {
       changed = false;
@@ -328,7 +377,6 @@ export default function App() {
         const sourceId = link.source.id || link.source;
         const targetId = link.target.id || link.target;
 
-        // Check both directions
         if (distances[sourceId] + 1 < distances[targetId]) {
           distances[targetId] = distances[sourceId] + 1;
           changed = true;
@@ -344,12 +392,12 @@ export default function App() {
   };
 
   const nodeDistances = useMemo(() => calculateNodeDistances(), [graphData]);
-  // The original misplaced logic is now REMOVED from here.
 
   if (view === "intro") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center p-4">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full shadow-2xl border border-white/20">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center p-4 relative overflow-hidden">
+        <AnimatedBrain />
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full shadow-2xl border border-white/20 relative z-10">
           <h1 className="text-4xl font-bold text-white mb-2 text-center">
             StudySphere
           </h1>
@@ -468,10 +516,9 @@ export default function App() {
           ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
           ctx.fill();
 
-          // Draw label with same opacity
           ctx.fillStyle = "#fff";
           ctx.fillText(label, node.x + nodeRadius + 2, node.y + 4);
-          ctx.globalAlpha = 1; // Reset opacity
+          ctx.globalAlpha = 1;
         }}
         onNodeClick={handleNodeClick}
       />
