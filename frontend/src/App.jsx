@@ -6,38 +6,32 @@ function ErrorToast({ message, onClose }) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Slide down
     setTimeout(() => setIsVisible(true), 10);
-    
-    // Slide up after 5 seconds
     const timer = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(onClose, 300); // Wait for animation to complete
+      setTimeout(onClose, 300);
     }, 5000);
-
     return () => clearTimeout(timer);
   }, [onClose]);
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: isVisible ? "20px" : "-100px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 1000,
-        background: "linear-gradient(135deg, #ef4444, #dc2626)",
-        color: "#fff",
-        padding: "16px 24px",
-        borderRadius: "12px",
-        boxShadow: "0 10px 40px rgba(239, 68, 68, 0.4)",
-        fontSize: "15px",
-        fontWeight: "500",
-        transition: "top 0.3s ease-out",
-        maxWidth: "90vw",
-        textAlign: "center"
-      }}
-    >
+    <div style={{
+      position: "fixed",
+      top: isVisible ? "20px" : "-100px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 1000,
+      background: "linear-gradient(135deg, #ef4444, #dc2626)",
+      color: "#fff",
+      padding: "16px 24px",
+      borderRadius: "12px",
+      boxShadow: "0 10px 40px rgba(239, 68, 68, 0.4)",
+      fontSize: "15px",
+      fontWeight: "500",
+      transition: "top 0.3s ease-out",
+      maxWidth: "90vw",
+      textAlign: "center"
+    }}>
       ⚠️ {message}
     </div>
   );
@@ -54,101 +48,64 @@ function AnimatedGlobe() {
     return () => clearInterval(interval);
   }, []);
 
-  // Create spherical globe pattern with reduced nodes
   const globeData = useMemo(() => {
     const nodes = [];
     const connections = [];
-    
     const radius = 150;
-    const latitudes = 12; // Reduced from previous
-    const longitudes = 20; // Reduced from previous
-    
+    const latitudes = 12;
+    const longitudes = 20;
     let nodeId = 0;
     
-    // Create nodes in spherical pattern
     for (let lat = 0; lat < latitudes; lat++) {
-      const theta = (lat / latitudes) * Math.PI; // 0 to PI
+      const theta = (lat / latitudes) * Math.PI;
       const y = -radius * Math.cos(theta);
       const ringRadius = radius * Math.sin(theta);
       
       for (let lon = 0; lon < longitudes; lon++) {
-        const phi = (lon / longitudes) * 2 * Math.PI; // 0 to 2PI
+        const phi = (lon / longitudes) * 2 * Math.PI;
         const x = ringRadius * Math.cos(phi);
         const z = ringRadius * Math.sin(phi);
-        
-        nodes.push({
-          id: nodeId++,
-          x, y, z,
-          lat, lon
-        });
+        nodes.push({ id: nodeId++, x, y, z, lat, lon });
       }
     }
 
-    // Create connections between nearby nodes (latitude and longitude neighbors)
     nodes.forEach((node, i) => {
-      // Connect to next in longitude (around the ring)
-      const nextLon = nodes.find(n => 
-        n.lat === node.lat && n.lon === (node.lon + 1) % longitudes
-      );
-      if (nextLon) {
-        connections.push({ from: i, to: nextLon.id });
-      }
+      const nextLon = nodes.find(n => n.lat === node.lat && n.lon === (node.lon + 1) % longitudes);
+      if (nextLon) connections.push({ from: i, to: nextLon.id });
       
-      // Connect to next latitude (vertical lines)
       if (node.lat < latitudes - 1) {
-        const nextLat = nodes.find(n => 
-          n.lat === node.lat + 1 && n.lon === node.lon
-        );
-        if (nextLat) {
-          connections.push({ from: i, to: nextLat.id });
-        }
+        const nextLat = nodes.find(n => n.lat === node.lat + 1 && n.lon === node.lon);
+        if (nextLat) connections.push({ from: i, to: nextLat.id });
       }
     });
 
     return { nodes, connections };
   }, []);
 
-  // Rotate all nodes together around Y-axis
   const rotatedNodes = globeData.nodes.map(node => {
     const rad = (rotation * Math.PI) / 180;
     const cosR = Math.cos(rad);
     const sinR = Math.sin(rad);
-    
-    // 3D rotation around Y-axis
     const rotatedX = node.x * cosR + node.z * sinR;
     const rotatedZ = -node.x * sinR + node.z * cosR;
-    
-    // Perspective projection
     const perspective = 1200;
     const scale = perspective / (perspective + rotatedZ);
-    
-    return {
-      ...node,
-      screenX: rotatedX * scale,
-      screenY: node.y * scale,
-      scale: scale,
-      z: rotatedZ
-    };
+    return { ...node, screenX: rotatedX * scale, screenY: node.y * scale, scale, z: rotatedZ };
   });
 
-  // Sort by z-depth for proper rendering
   const sortedNodes = [...rotatedNodes].sort((a, b) => a.z - b.z);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
       <svg width="100%" height="100%" viewBox="-400 -300 800 600" className="opacity-25">
-        {/* Draw connections first */}
         {globeData.connections.map((conn, idx) => {
           const from = rotatedNodes[conn.from];
           const to = rotatedNodes[conn.to];
-          
-          // Only draw if both nodes are on visible side
           if (from.z > -150 && to.z > -150) {
             const avgZ = (from.z + to.z) / 2;
             const depthFactor = (avgZ + 150) / 300;
             const opacity = 0.15 + depthFactor * 0.25;
             const strokeWidth = 0.8 + depthFactor * 0.8;
-            
             return (
               <line
                 key={`conn-${idx}`}
@@ -164,31 +121,16 @@ function AnimatedGlobe() {
           }
           return null;
         })}
-        
-        {/* Draw nodes */}
         {sortedNodes.map(node => {
           const depthFactor = (node.z + 150) / 300;
           const depthOpacity = 0.3 + depthFactor * 0.7;
           const size = 2.5 + node.scale * 2;
           const brightness = 0.6 + depthFactor * 0.4;
-          
           return (
             <g key={node.id}>
-              <circle
-                cx={node.screenX}
-                cy={node.screenY}
-                r={size + 0.8}
-                fill="#1A659E"
-                opacity={depthOpacity * 0.3}
-              />
-              <circle
-                cx={node.screenX}
-                cy={node.screenY}
-                r={size}
-                fill="#1A659E"
-                opacity={depthOpacity}
-                style={{ filter: `brightness(${brightness})` }}
-              />
+              <circle cx={node.screenX} cy={node.screenY} r={size + 0.8} fill="#1A659E" opacity={depthOpacity * 0.3} />
+              <circle cx={node.screenX} cy={node.screenY} r={size} fill="#1A659E" opacity={depthOpacity}
+                style={{ filter: `brightness(${brightness})` }} />
             </g>
           );
         })}
@@ -198,14 +140,7 @@ function AnimatedGlobe() {
 }
 
 function solarSystemLayout(nodes, links) {
-  const levelRadius = {
-    0: 0,
-    1: 250,
-    2: 500,
-    3: 750,
-    4: 1000
-  };
-
+  const levelRadius = { 0: 0, 1: 250, 2: 500, 3: 750, 4: 1000 };
   const adjacency = {};
   const inDegree = {};
   nodes.forEach(node => {
@@ -222,9 +157,7 @@ function solarSystemLayout(nodes, links) {
 
   const levelNodes = {};
   nodes.forEach(node => {
-    if (!levelNodes[node.level]) {
-      levelNodes[node.level] = [];
-    }
+    if (!levelNodes[node.level]) levelNodes[node.level] = [];
     levelNodes[node.level].push(node);
   });
 
@@ -238,25 +171,13 @@ function solarSystemLayout(nodes, links) {
   });
 
   return nodes.map(node => {
-    if (node.level === 0) {
-      return {
-        ...node,
-        fx: 0,
-        fy: 0
-      };
-    }
-
+    if (node.level === 0) return { ...node, fx: 0, fy: 0 };
     const nodesAtLevel = levelNodes[node.level];
     const nodeIndex = nodesAtLevel.indexOf(node);
     const totalNodesAtLevel = nodesAtLevel.length;
     const radius = levelRadius[node.level];
     const angle = (nodeIndex / totalNodesAtLevel) * 2 * Math.PI - Math.PI / 2;
-
-    return {
-      ...node,
-      fx: radius * Math.cos(angle),
-      fy: radius * Math.sin(angle)
-    };
+    return { ...node, fx: radius * Math.cos(angle), fy: radius * Math.sin(angle) };
   });
 }
 
@@ -272,25 +193,16 @@ export default function App() {
   const [score, setScore] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [error, setError] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Check if storage is available
-  const isStorageAvailable = () => {
-    return typeof window !== 'undefined' && window.storage;
-  };
+  const isStorageAvailable = () => typeof window !== 'undefined' && window.storage;
 
-  // Load saved graphs from storage on mount
   useEffect(() => {
-    if (isStorageAvailable()) {
-      loadSavedGraphs();
-    }
+    if (isStorageAvailable()) loadSavedGraphs();
   }, []);
 
   const loadSavedGraphs = async () => {
-    if (!isStorageAvailable()) {
-      console.log('Storage not available');
-      return;
-    }
-    
+    if (!isStorageAvailable()) return;
     try {
       const result = await window.storage.list('graph:');
       if (result && result.keys) {
@@ -298,9 +210,7 @@ export default function App() {
         for (const key of result.keys) {
           try {
             const data = await window.storage.get(key);
-            if (data && data.value) {
-              graphs.push(JSON.parse(data.value));
-            }
+            if (data && data.value) graphs.push(JSON.parse(data.value));
           } catch (err) {
             console.error(`Error loading graph ${key}:`, err);
           }
@@ -308,7 +218,6 @@ export default function App() {
         setSavedGraphs(graphs.sort((a, b) => b.timestamp - a.timestamp));
       }
     } catch (error) {
-      console.log('No saved graphs found or storage error:', error);
       setSavedGraphs([]);
     }
   };
@@ -325,8 +234,6 @@ export default function App() {
     };
 
     if (!isStorageAvailable()) {
-      console.log('Storage not available - graph not persisted');
-      // Still set the active tab and continue without storage
       setActiveTabId(graphId);
       setSavedGraphs(prev => [graphState, ...prev]);
       return;
@@ -338,7 +245,6 @@ export default function App() {
       setActiveTabId(graphId);
     } catch (error) {
       console.error('Error saving graph:', error);
-      // Continue anyway without persistence
       setActiveTabId(graphId);
       setSavedGraphs(prev => [graphState, ...prev]);
     }
@@ -346,7 +252,6 @@ export default function App() {
 
   const loadGraph = async (graphId) => {
     if (!isStorageAvailable()) {
-      // Load from in-memory savedGraphs
       const graph = savedGraphs.find(g => g.id === graphId);
       if (graph) {
         setGraphData({ nodes: graph.nodes, links: graph.links });
@@ -370,7 +275,6 @@ export default function App() {
       }
     } catch (error) {
       console.error('Error loading graph:', error);
-      // Try loading from in-memory as fallback
       const graph = savedGraphs.find(g => g.id === graphId);
       if (graph) {
         setGraphData({ nodes: graph.nodes, links: graph.links });
@@ -384,7 +288,6 @@ export default function App() {
 
   const deleteGraph = async (graphId) => {
     if (!isStorageAvailable()) {
-      // Delete from in-memory only
       setSavedGraphs(prev => prev.filter(g => g.id !== graphId));
       if (activeTabId === graphId) {
         setActiveTabId(null);
@@ -402,7 +305,6 @@ export default function App() {
       }
     } catch (error) {
       console.error('Error deleting graph:', error);
-      // Delete from in-memory as fallback
       setSavedGraphs(prev => prev.filter(g => g.id !== graphId));
       if (activeTabId === graphId) {
         setActiveTabId(null);
@@ -504,8 +406,6 @@ export default function App() {
       const laidOut = solarSystemLayout(data.nodes, data.links);
       setGraphData({ nodes: laidOut, links: data.links });
       setNodeContent(data.nodeContent);
-      
-      // Save the new graph
       await saveCurrentGraph(topic);
       setView("graph");
     } catch (error) {
@@ -582,7 +482,6 @@ export default function App() {
 
     setGraphData(newGraphData);
 
-    // Save progress to storage
     if (activeTabId && isStorageAvailable()) {
       try {
         const result = await window.storage.get(activeTabId);
@@ -596,7 +495,6 @@ export default function App() {
         console.error('Error saving progress:', error);
       }
     } else if (activeTabId) {
-      // Update in-memory storage
       setSavedGraphs(prev => prev.map(g => 
         g.id === activeTabId 
           ? { ...g, nodes: updatedNodes, links: cleanedLinks }
@@ -655,6 +553,17 @@ export default function App() {
 
   const nodeDistances = useMemo(() => calculateNodeDistances(), [graphData]);
 
+  const completedNodes = graphData.nodes.filter(n => n.quiz_completed).length;
+  const totalNodes = graphData.nodes.length;
+  const progressPercent = totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0;
+
+  const getProgressColor = () => {
+    if (progressPercent === 0) return "#ef4444";
+    if (progressPercent < 50) return "#ef4444";
+    if (progressPercent < 70) return "#eab308";
+    return "#22c55e";
+  };
+
   if (view === "intro") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center p-4 relative overflow-hidden" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
@@ -687,7 +596,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* Saved Graphs Section - Now as invisible button */}
           {savedGraphs.length > 0 && (
             <button
               onClick={() => setView("graph")}
@@ -736,16 +644,18 @@ export default function App() {
   return (
     <div style={{ height: "100vh", width: "100vw", position: "relative", display: "flex", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       {error && <ErrorToast message={error} onClose={() => setError(null)} />}
+      
       {/* Left Sidebar with Tabs */}
       <div style={{
-        width: "320px",
+        width: sidebarCollapsed ? "0" : "320px",
         background: "rgba(17, 17, 17, 0.95)",
         borderRight: "1px solid #333",
         display: "flex",
         flexDirection: "column",
-        zIndex: 20
+        zIndex: 20,
+        transition: "width 0.3s ease",
+        overflow: "hidden"
       }}>
-        {/* New Topic Input */}
         <div style={{ padding: "16px", borderBottom: "1px solid #333" }}>
           <input
             type="text"
@@ -784,7 +694,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Tabs */}
         <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
           <h3 style={{ color: "#999", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", padding: "8px 12px", marginBottom: "4px", letterSpacing: '0.05em' }}>
             Your Learning Paths
@@ -853,9 +762,36 @@ export default function App() {
         </div>
       </div>
 
+      {/* Collapse/Expand Button */}
+      <button
+        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+        style={{
+          position: "fixed",
+          left: sidebarCollapsed ? "10px" : "310px",
+          top: "20px",
+          width: "40px",
+          height: "40px",
+          borderRadius: "8px",
+          background: "rgba(17, 17, 17, 0.95)",
+          border: "1px solid #333",
+          color: "#fff",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "18px",
+          zIndex: 30,
+          transition: "left 0.3s ease"
+        }}
+      >
+        {sidebarCollapsed ? "→" : "←"}
+      </button>
+
       {/* Main Graph Area */}
-      <div style={{ flex: 1, position: "relative" }}>
+      <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh" }}>
         <ForceGraph2D
+          width={window.innerWidth}
+          height={window.innerHeight}
           graphData={graphData}
           nodeLabel="label"
           nodeAutoColorBy={n => (n.unlocked ? "unlocked" : "locked")}
@@ -1063,6 +999,49 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {/* Progress Bar at Bottom */}
+      {graphData.nodes.length > 0 && (
+        <div style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: "60px",
+          background: "rgba(17, 17, 17, 0.95)",
+          borderTop: "1px solid #333",
+          display: "flex",
+          alignItems: "center",
+          padding: "0 24px",
+          zIndex: 25
+        }}>
+          <div style={{ flex: 1, marginRight: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+              <span style={{ color: "#999", fontSize: "13px", fontWeight: "600" }}>
+                Learning Progress
+              </span>
+              <span style={{ color: "#fff", fontSize: "13px", fontWeight: "600" }}>
+                {completedNodes} / {totalNodes} ({Math.round(progressPercent)}%)
+              </span>
+            </div>
+            <div style={{
+              width: "100%",
+              height: "8px",
+              background: "#2a2a2a",
+              borderRadius: "4px",
+              overflow: "hidden"
+            }}>
+              <div style={{
+                width: `${progressPercent}%`,
+                height: "100%",
+                background: getProgressColor(),
+                transition: "all 0.5s ease",
+                borderRadius: "4px"
+              }} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
