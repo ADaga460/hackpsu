@@ -38,104 +38,94 @@ function ErrorToast({ message, onClose }) {
   );
 }
 
-// Animated Globe Component
-function AnimatedGlobe() {
-  const [rotation, setRotation] = useState(0);
+// Loading Progress Component
+function LoadingProgress({ stage, progress }) {
+  const stages = [
+    { name: "structure", label: "Generating Structure", icon: "🗺️" },
+    { name: "content", label: "Writing Content", icon: "📝" },
+    { name: "quizzes", label: "Creating Quizzes", icon: "❓" }
+  ];
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRotation(r => r + 0.4);
-    }, 30);
-    return () => clearInterval(interval);
-  }, []);
-
-  const globeData = useMemo(() => {
-    const nodes = [];
-    const connections = [];
-    const radius = 140;
-    const latitudes = 8;
-    const longitudes = 12;
-    let nodeId = 0;
-
-    for (let lat = 0; lat <= latitudes; lat++) {
-      const theta = (lat / latitudes) * Math.PI;
-      const y = -radius * Math.cos(theta);
-      const ringRadius = radius * Math.sin(theta);
-
-      for (let lon = 0; lon < longitudes; lon++) {
-        const phi = (lon / longitudes) * 2 * Math.PI;
-        const x = ringRadius * Math.cos(phi);
-        const z = ringRadius * Math.sin(phi);
-        nodes.push({ id: nodeId++, x, y, z, lat, lon });
-      }
-    }
-
-    nodes.forEach((node, i) => {
-      const nextLon = nodes.find(n => n.lat === node.lat && n.lon === (node.lon + 1) % longitudes);
-      if (nextLon) connections.push({ from: i, to: nextLon.id });
-
-      if (node.lat < latitudes) {
-        const nextLat = nodes.find(n => n.lat === node.lat + 1 && n.lon === node.lon);
-        if (nextLat) connections.push({ from: i, to: nextLat.id });
-      }
-    });
-
-    return { nodes, connections };
-  }, []);
-
-  const rotatedNodes = globeData.nodes.map(node => {
-    const rad = (rotation * Math.PI) / 180;
-    const cosR = Math.cos(rad);
-    const sinR = Math.sin(rad);
-    const rotatedX = node.x * cosR + node.z * sinR;
-    const rotatedZ = -node.x * sinR + node.z * cosR;
-    const perspective = 1200;
-    const scale = perspective / (perspective + rotatedZ);
-    return { ...node, screenX: rotatedX * scale, screenY: node.y * scale, scale, z: rotatedZ };
-  });
-
-  const sortedNodes = [...rotatedNodes].sort((a, b) => a.z - b.z);
+  const currentStageIndex = stages.findIndex(s => s.name === stage);
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <svg width="100%" height="120%" viewBox="-500 -400 1000 900" className="opacity-20">
-        {globeData.connections.map((conn, idx) => {
-          const from = rotatedNodes[conn.from];
-          const to = rotatedNodes[conn.to];
-          if (from.z > -150 && to.z > -150) {
-            const avgZ = (from.z + to.z) / 2;
-            const depthFactor = (avgZ + 150) / 300;
-            const opacity = 0.15 + depthFactor * 0.25;
-            const strokeWidth = 1 + depthFactor * 1;
-            return (
-              <line
-                key={`conn-${idx}`}
-                x1={from.screenX}
-                y1={from.screenY}
-                x2={to.screenX}
-                y2={to.screenY}
-                stroke="#60a5fa"
-                strokeWidth={strokeWidth}
-                opacity={opacity}
-                strokeLinecap="round"
-              />
-            );
-          }
-          return null;
-        })}
-        {sortedNodes.map(node => {
-          if (node.z < -100) return null;
-          const depthFactor = (node.z + 150) / 300;
-          const depthOpacity = 0.3 + depthFactor * 0.4;
-          const size = 2.5 + node.scale * 2;
+    <div style={{
+      position: "fixed",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      zIndex: 1000,
+      background: "rgba(15, 23, 42, 0.98)",
+      padding: "32px",
+      borderRadius: "16px",
+      boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
+      border: "1px solid rgba(255, 255, 255, 0.1)",
+      backdropFilter: "blur(20px)",
+      minWidth: "400px"
+    }}>
+      <h3 style={{ margin: "0 0 24px 0", fontSize: "20px", fontWeight: "600", color: "#fff", textAlign: "center" }}>
+        Building Your Learning Path
+      </h3>
+
+      <div style={{ marginBottom: "24px" }}>
+        {stages.map((s, idx) => {
+          const isActive = idx === currentStageIndex;
+          const isComplete = idx < currentStageIndex;
+          
           return (
-            <g key={node.id}>
-              <circle cx={node.screenX} cy={node.screenY} r={size + 1} fill="#60a5fa" opacity={depthOpacity * 0.2} />
-              <circle cx={node.screenX} cy={node.screenY} r={size} fill="#60a5fa" opacity={depthOpacity} />
-            </g>
+            <div key={s.name} style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                background: isComplete ? "#10b981" : isActive ? "#3b82f6" : "rgba(255, 255, 255, 0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "20px",
+                marginRight: "16px",
+                transition: "all 0.3s"
+              }}>
+                {isComplete ? "✓" : s.icon}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  color: isActive ? "#fff" : isComplete ? "#10b981" : "#64748b",
+                  fontWeight: isActive ? "600" : "500",
+                  fontSize: "14px",
+                  marginBottom: "4px"
+                }}>
+                  {s.label}
+                </div>
+                {isActive && (
+                  <div style={{
+                    height: "4px",
+                    background: "rgba(255, 255, 255, 0.1)",
+                    borderRadius: "2px",
+                    overflow: "hidden"
+                  }}>
+                    <div style={{
+                      width: `${progress}%`,
+                      height: "100%",
+                      background: "#3b82f6",
+                      transition: "width 0.3s",
+                      boxShadow: "0 0 8px #3b82f6"
+                    }} />
+                  </div>
+                )}
+              </div>
+            </div>
           );
         })}
-      </svg>
+      </div>
+
+      <div style={{
+        textAlign: "center",
+        color: "#94a3b8",
+        fontSize: "13px"
+      }}>
+        This may take 30-60 seconds
+      </div>
     </div>
   );
 }
@@ -186,6 +176,8 @@ export default function App() {
   const [view, setView] = useState("intro");
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState("structure");
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [savedGraphs, setSavedGraphs] = useState([]);
   const [activeTabId, setActiveTabId] = useState(null);
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
@@ -316,35 +308,77 @@ export default function App() {
 
   const fetchGraphDataFromAPI = async (topicName) => {
     try {
-      const response = await fetch('https://sphere-backend-gsoo.onrender.com/api/fetch', {
+      // Stage 1: Generate structure
+      setLoadingStage("structure");
+      setLoadingProgress(0);
+      
+      const structureResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-structure', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: topicName })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: topicName })
       });
 
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
+      if (!structureResponse.ok) {
+        throw new Error(`Structure generation failed: ${structureResponse.status}`);
       }
 
-      const result = await response.json();
+      const structureData = await structureResponse.json();
+      setLoadingProgress(100);
 
-      const transformedNodeContent = {};
-      if (result.nodeContent) {
-        Object.keys(result.nodeContent).forEach(nodeId => {
-          const nodeData = result.nodeContent[nodeId];
-          transformedNodeContent[nodeId] = {
-            content: nodeData.content,
-            quiz: nodeData.quiz
-          };
-        });
+      // Stage 2: Generate content
+      setLoadingStage("content");
+      setLoadingProgress(0);
+      
+      const contentResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          topic: topicName,
+          nodes: structureData.nodes 
+        })
+      });
+
+      if (!contentResponse.ok) {
+        throw new Error(`Content generation failed: ${contentResponse.status}`);
       }
+
+      const contentData = await contentResponse.json();
+      setLoadingProgress(100);
+
+      // Stage 3: Generate quizzes
+      setLoadingStage("quizzes");
+      setLoadingProgress(0);
+      
+      const quizzesResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-quizzes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          topic: topicName,
+          nodes: structureData.nodes,
+          content: contentData.nodeContent
+        })
+      });
+
+      if (!quizzesResponse.ok) {
+        throw new Error(`Quiz generation failed: ${quizzesResponse.status}`);
+      }
+
+      const quizzesData = await quizzesResponse.json();
+      setLoadingProgress(100);
+
+      // Combine all data
+      const finalNodeContent = {};
+      Object.keys(contentData.nodeContent).forEach(nodeId => {
+        finalNodeContent[nodeId] = {
+          content: contentData.nodeContent[nodeId],
+          quiz: quizzesData.nodeQuizzes[nodeId]
+        };
+      });
 
       return {
-        nodes: result.nodes || [],
-        links: result.links || [],
-        nodeContent: transformedNodeContent
+        nodes: structureData.nodes || [],
+        links: structureData.links || [],
+        nodeContent: finalNodeContent
       };
     } catch (error) {
       console.error('Error fetching from API:', error);
@@ -355,6 +389,8 @@ export default function App() {
   const handleStartLearning = async () => {
     if (!topic.trim()) return;
     setLoading(true);
+    setLoadingStage("structure");
+    setLoadingProgress(0);
     setError(null);
 
     try {
@@ -382,6 +418,12 @@ export default function App() {
       setError("🔒 Complete previous topics first");
       return;
     }
+    
+    if (!nodeContent[node.id]) {
+      setError("Content not available for this node");
+      return;
+    }
+    
     setSelectedNode(node);
     setScore(null);
     setSelectedAnswer(null);
@@ -474,7 +516,12 @@ export default function App() {
     }
 
     const currentQuiz = nodeContent[selectedNode.id]?.quiz;
-    const isCorrect = currentQuiz && selectedAnswer === currentQuiz.answer;
+    if (!currentQuiz || typeof currentQuiz.answer === 'undefined') {
+      setError("Quiz data is incomplete");
+      return;
+    }
+
+    const isCorrect = selectedAnswer === currentQuiz.answer;
 
     setScore(isCorrect ? 10 : 0);
 
@@ -529,8 +576,9 @@ export default function App() {
 
   if (view === "intro") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex relative overflow-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex relative overflow-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#0f172a" }}>
         {error && <ErrorToast message={error} onClose={() => setError(null)} />}
+        {loading && <LoadingProgress stage={loadingStage} progress={loadingProgress} />}
 
         <div className="w-1/2 flex items-center justify-center p-12 relative z-10">
           <div className="max-w-md w-full">
@@ -547,9 +595,10 @@ export default function App() {
                 type="text"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
+                onKeyPress={(e) => e.key === 'Enter' && topic.trim() && !loading && handleStartLearning()}
                 placeholder="Enter any topic..."
-                className="w-full px-4 py-3.5 rounded-lg bg-white/10 text-white placeholder-slate-400 border border-white/20 focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all backdrop-blur-sm"
+                disabled={loading}
+                className="w-full px-4 py-3.5 rounded-lg bg-white/10 text-white placeholder-slate-400 border border-white/20 focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all backdrop-blur-sm disabled:opacity-50"
                 style={{ fontSize: '15px' }}
               />
               <button
@@ -570,7 +619,7 @@ export default function App() {
                     <div
                       key={graph.id}
                       className="bg-white/5 hover:bg-white/10 rounded-lg p-3 flex items-center justify-between transition-all cursor-pointer border border-white/10"
-                      onClick={() => loadGraph(graph.id)}
+                      onClick={() => !loading && loadGraph(graph.id)}
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-white font-medium text-sm truncate">{graph.topic}</p>
@@ -581,7 +630,7 @@ export default function App() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (window.confirm(`Delete "${graph.topic}"?`)) {
+                          if (!loading && window.confirm(`Delete "${graph.topic}"?`)) {
                             deleteGraph(graph.id);
                           }
                         }}
@@ -598,7 +647,43 @@ export default function App() {
         </div>
 
         <div className="w-1/2 relative flex items-center justify-center">
-          <AnimatedGlobe />
+          {/* Network visualization background */}
+          <div style={{ width: "500px", height: "500px", position: "relative" }}>
+            <svg width="500" height="500" style={{ opacity: 0.2 }}>
+              <defs>
+                <radialGradient id="nodeGlow">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+              
+              {/* Animated connections */}
+              <line x1="250" y1="250" x2="150" y2="150" stroke="#3b82f6" strokeWidth="2" opacity="0.3" />
+              <line x1="250" y1="250" x2="350" y2="150" stroke="#3b82f6" strokeWidth="2" opacity="0.3" />
+              <line x1="250" y1="250" x2="150" y2="350" stroke="#3b82f6" strokeWidth="2" opacity="0.3" />
+              <line x1="250" y1="250" x2="350" y2="350" stroke="#3b82f6" strokeWidth="2" opacity="0.3" />
+              <line x1="150" y1="150" x2="100" y2="100" stroke="#3b82f6" strokeWidth="1.5" opacity="0.2" />
+              <line x1="350" y1="150" x2="400" y2="100" stroke="#3b82f6" strokeWidth="1.5" opacity="0.2" />
+              <line x1="150" y1="350" x2="100" y2="400" stroke="#3b82f6" strokeWidth="1.5" opacity="0.2" />
+              <line x1="350" y1="350" x2="400" y2="400" stroke="#3b82f6" strokeWidth="1.5" opacity="0.2" />
+              
+              {/* Center node */}
+              <circle cx="250" cy="250" r="25" fill="url(#nodeGlow)" />
+              <circle cx="250" cy="250" r="18" fill="#3b82f6" />
+              
+              {/* Level 1 nodes */}
+              <circle cx="150" cy="150" r="18" fill="#3b82f6" opacity="0.7" />
+              <circle cx="350" cy="150" r="18" fill="#3b82f6" opacity="0.7" />
+              <circle cx="150" cy="350" r="18" fill="#3b82f6" opacity="0.7" />
+              <circle cx="350" cy="350" r="18" fill="#3b82f6" opacity="0.7" />
+              
+              {/* Level 2 nodes */}
+              <circle cx="100" cy="100" r="14" fill="#64748b" opacity="0.5" />
+              <circle cx="400" cy="100" r="14" fill="#64748b" opacity="0.5" />
+              <circle cx="100" cy="400" r="14" fill="#64748b" opacity="0.5" />
+              <circle cx="400" cy="400" r="14" fill="#64748b" opacity="0.5" />
+            </svg>
+          </div>
         </div>
       </div>
     );
@@ -821,23 +906,19 @@ export default function App() {
 
             ctx.globalAlpha = opacity;
             
-            // Outer glow
             ctx.shadowBlur = node.unlocked ? 15 : 0;
             ctx.shadowColor = fillColor;
             
-            // Main circle
             ctx.fillStyle = fillColor;
             ctx.beginPath();
             ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
             ctx.fill();
             
-            // Stroke
             ctx.shadowBlur = 0;
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = 2 / globalScale;
             ctx.stroke();
 
-            // Inner highlight
             if (node.unlocked) {
               ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
               ctx.beginPath();
@@ -845,7 +926,6 @@ export default function App() {
               ctx.fill();
             }
 
-            // Text
             ctx.fillStyle = "#fff";
             ctx.shadowBlur = 3;
             ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
@@ -898,11 +978,11 @@ export default function App() {
             </div>
             
             <div style={{ padding: "20px" }}>
-              <p style={{ margin: 0, lineHeight: "1.6", color: "#cbd5e1", fontSize: "14px" }}>
+              <p style={{ margin: 0, lineHeight: "1.6", color: "#cbd5e1", fontSize: "14px", whiteSpace: "pre-wrap" }}>
                 {nodeContent[selectedNode.id]?.content || "Loading content..."}
               </p>
               
-              {nodeContent[selectedNode.id]?.quiz && (
+              {nodeContent[selectedNode.id]?.quiz && nodeContent[selectedNode.id].quiz.options && (
                 <div style={{ marginTop: "20px" }}>
                   <div style={{
                     padding: "16px",
