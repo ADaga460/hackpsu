@@ -55,12 +55,12 @@ function AnimatedGlobe() {
     const latitudes = 8;
     const longitudes = 12;
     let nodeId = 0;
-    
+
     for (let lat = 0; lat <= latitudes; lat++) {
       const theta = (lat / latitudes) * Math.PI;
       const y = -radius * Math.cos(theta);
       const ringRadius = radius * Math.sin(theta);
-      
+
       for (let lon = 0; lon < longitudes; lon++) {
         const phi = (lon / longitudes) * 2 * Math.PI;
         const x = ringRadius * Math.cos(phi);
@@ -72,7 +72,7 @@ function AnimatedGlobe() {
     nodes.forEach((node, i) => {
       const nextLon = nodes.find(n => n.lat === node.lat && n.lon === (node.lon + 1) % longitudes);
       if (nextLon) connections.push({ from: i, to: nextLon.id });
-      
+
       if (node.lat < latitudes) {
         const nextLat = nodes.find(n => n.lat === node.lat + 1 && n.lon === node.lon);
         if (nextLat) connections.push({ from: i, to: nextLat.id });
@@ -317,7 +317,7 @@ export default function App() {
 
   const fetchGraphDataFromAPI = async (topicName) => {
     try {
-      const response = await fetch('https://sphere-backend-gsoo.onrender.com/api/data', {
+      const response = await fetch('https://sphere-backend-gsoo.onrender.com/api/fetch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -330,7 +330,7 @@ export default function App() {
       }
 
       const result = await response.json();
-      
+
       // The API should return data with nodes, links, and nodeContent
       // Transform the quiz format from array to single quiz object for compatibility
       const transformedNodeContent = {};
@@ -339,7 +339,7 @@ export default function App() {
           const nodeData = result.nodeContent[nodeId];
           transformedNodeContent[nodeId] = {
             content: nodeData.content,
-            quiz: nodeData.quiz && nodeData.quiz.length > 0 ? nodeData.quiz[0] : null
+            quiz: nodeData.quiz  // Now expects single quiz object, not array
           };
         });
       }
@@ -362,7 +362,7 @@ export default function App() {
 
     try {
       const data = await fetchGraphDataFromAPI(topic);
-      
+
       if (!data.nodes || data.nodes.length === 0) {
         throw new Error('No data received from API');
       }
@@ -459,8 +459,8 @@ export default function App() {
         console.error('Error saving progress:', error);
       }
     } else if (activeTabId) {
-      setSavedGraphs(prev => prev.map(g => 
-        g.id === activeTabId 
+      setSavedGraphs(prev => prev.map(g =>
+        g.id === activeTabId
           ? { ...g, nodes: updatedNodes, links: cleanedLinks }
           : g
       ));
@@ -532,7 +532,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex relative overflow-hidden" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
         {error && <ErrorToast message={error} onClose={() => setError(null)} />}
-        
+
         {/* Left Side - Content */}
         <div className="w-1/2 flex items-center justify-center p-12 relative z-10">
           <div className="max-w-lg w-full">
@@ -567,7 +567,7 @@ export default function App() {
                 <h2 className="text-xl font-semibold text-white mb-4">Your Learning Paths</h2>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
                   {savedGraphs.map(graph => (
-                    <div 
+                    <div
                       key={graph.id}
                       className="bg-white/10 rounded-lg p-4 flex items-center justify-between hover:bg-white/20 transition-all cursor-pointer backdrop-blur-sm"
                       onClick={() => loadGraph(graph.id)}
@@ -608,7 +608,7 @@ export default function App() {
   return (
     <div style={{ height: "100vh", width: "100vw", position: "relative", display: "flex", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       {error && <ErrorToast message={error} onClose={() => setError(null)} />}
-      
+
       {/* Left Sidebar with Tabs */}
       <div style={{
         width: sidebarCollapsed ? "0" : "320px",
@@ -845,10 +845,10 @@ export default function App() {
             </p>
             {nodeContent[selectedNode.id]?.quiz && (
               <>
-                <div style={{ 
-                  marginTop: "20px", 
-                  padding: "12px", 
-                  background: "#1a1a1a", 
+                <div style={{
+                  marginTop: "20px",
+                  padding: "12px",
+                  background: "#1a1a1a",
                   borderRadius: "8px",
                   borderLeft: "3px solid #3b82f6"
                 }}>
@@ -857,9 +857,9 @@ export default function App() {
                   </p>
                   {nodeContent[selectedNode.id].quiz.options.map((opt, idx) => (
                     <div key={idx} style={{ marginTop: "10px" }}>
-                      <label style={{ 
-                        display: "flex", 
-                        alignItems: "center", 
+                      <label style={{
+                        display: "flex",
+                        alignItems: "center",
                         cursor: score === null ? "pointer" : "default",
                         padding: "8px",
                         borderRadius: "6px",
@@ -874,7 +874,7 @@ export default function App() {
                           onChange={() => setSelectedAnswer(idx)}
                           disabled={score !== null}
                           style={{ marginRight: "10px" }}
-                        /> 
+                        />
                         <span style={{ flex: 1 }}>{opt}</span>
                       </label>
                     </div>
@@ -884,17 +884,17 @@ export default function App() {
             )}
 
             {score === null ? (
-              <button 
-                onClick={handleQuizSubmit} 
-                style={{ 
-                  marginTop: "15px", 
+              <button
+                onClick={handleQuizSubmit}
+                style={{
+                  marginTop: "15px",
                   width: "100%",
-                  padding: "12px 20px", 
-                  background: "linear-gradient(to right, #3b82f6, #2563eb)", 
-                  border: "none", 
-                  borderRadius: "8px", 
-                  color: "#fff", 
-                  cursor: "pointer", 
+                  padding: "12px 20px",
+                  background: "linear-gradient(to right, #3b82f6, #2563eb)",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  cursor: "pointer",
                   fontWeight: "600",
                   fontSize: "15px"
                 }}
@@ -902,10 +902,10 @@ export default function App() {
                 Submit Answer
               </button>
             ) : score === 10 ? (
-              <div style={{ 
-                marginTop: "15px", 
-                padding: "16px", 
-                background: "rgba(34, 197, 94, 0.15)", 
+              <div style={{
+                marginTop: "15px",
+                padding: "16px",
+                background: "rgba(34, 197, 94, 0.15)",
                 borderRadius: "8px",
                 border: "1px solid rgba(34, 197, 94, 0.3)"
               }}>
@@ -928,9 +928,9 @@ export default function App() {
               </div>
             ) : (
               <div style={{ marginTop: "15px" }}>
-                <div style={{ 
-                  padding: "16px", 
-                  background: "rgba(239, 68, 68, 0.15)", 
+                <div style={{
+                  padding: "16px",
+                  background: "rgba(239, 68, 68, 0.15)",
                   borderRadius: "8px",
                   border: "1px solid rgba(239, 68, 68, 0.3)",
                   marginBottom: "12px"
@@ -944,14 +944,14 @@ export default function App() {
                     setScore(null);
                     setSelectedAnswer(null);
                   }}
-                  style={{ 
-                    padding: "12px 20px", 
+                  style={{
+                    padding: "12px 20px",
                     width: "100%",
-                    background: "#ef4444", 
-                    border: "none", 
-                    borderRadius: "8px", 
-                    color: "#fff", 
-                    cursor: "pointer", 
+                    background: "#ef4444",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#fff",
+                    cursor: "pointer",
                     fontWeight: "600",
                     fontSize: "15px"
                   }}
