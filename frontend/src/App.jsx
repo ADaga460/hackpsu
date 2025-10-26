@@ -187,6 +187,12 @@ export default function App() {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [error, setError] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // New state for multiple quizzes
+  const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [showFinalScore, setShowFinalScore] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);
 
   const isStorageAvailable = () => typeof window !== 'undefined' && window.storage;
 
@@ -308,7 +314,6 @@ export default function App() {
 
   const fetchGraphDataFromAPI = async (topicName) => {
     try {
-      // Stage 1: Generate structure
       setLoadingStage("structure");
       setLoadingProgress(0);
       
@@ -325,7 +330,6 @@ export default function App() {
       const structureData = await structureResponse.json();
       setLoadingProgress(100);
 
-      // Stage 2: Generate content
       setLoadingStage("content");
       setLoadingProgress(0);
       
@@ -345,7 +349,6 @@ export default function App() {
       const contentData = await contentResponse.json();
       setLoadingProgress(100);
 
-      // Stage 3: Generate quizzes
       setLoadingStage("quizzes");
       setLoadingProgress(0);
       
@@ -366,14 +369,25 @@ export default function App() {
       const quizzesData = await quizzesResponse.json();
       setLoadingProgress(100);
 
-      // Combine all data
+      console.log("Quizzes data:", quizzesData);
+
+      // Combine all data - handle both "quiz" and "quizzes" fields
       const finalNodeContent = {};
       Object.keys(contentData.nodeContent).forEach(nodeId => {
+        let quizData = quizzesData.nodeQuizzes[nodeId];
+        
+        // Convert single quiz object to array if needed
+        if (quizData && !Array.isArray(quizData)) {
+          quizData = [quizData];
+        }
+        
         finalNodeContent[nodeId] = {
           content: contentData.nodeContent[nodeId],
-          quiz: quizzesData.nodeQuizzes[nodeId]
+          quizzes: quizData || []
         };
       });
+
+      console.log("Final node content:", finalNodeContent);
 
       return {
         nodes: structureData.nodes || [],
@@ -425,12 +439,16 @@ export default function App() {
     }
     
     setSelectedNode(node);
+    setCurrentQuizIndex(0);
     setScore(null);
     setSelectedAnswer(null);
+    setQuizAnswers({});
+    setShowFinalScore(false);
+    setFinalScore(0);
   };
 
-  const unlockNodes = async (parent, score) => {
-    const threshold = 0;
+  const unlockNodes = async (parent, totalScore) => {
+    const threshold = 8; // Need 8/10 to unlock
     const nodeParents = {};
     graphData.nodes.forEach(n => {
       nodeParents[n.id] = [];
@@ -456,7 +474,7 @@ export default function App() {
     const updatedNodes = nodesWithCompletion.map(n => {
       const isChild = childIds.includes(n.id);
       let shouldUnlock = false;
-      if (isChild && !n.unlocked && score >= threshold) {
+      if (isChild && !n.unlocked && totalScore >= threshold) {
         const parents = nodeParents[n.id];
         const allParentsCompleted = parents.every(parentId => {
           const parentNode = nodesWithCompletion.find(node => node.id === parentId);
@@ -515,19 +533,63 @@ export default function App() {
       return;
     }
 
-    const currentQuiz = nodeContent[selectedNode.id]?.quiz;
+    const quizzes = nodeContent[selectedNode.id]?.quizzes;
+    if (!quizzes || !Array.isArray(quizzes) || quizzes.length === 0) {
+      setError("Quiz data is incomplete");
+      return;
+    }
+
+    const currentQuiz = quizzes[currentQuizIndex];
     if (!currentQuiz || typeof currentQuiz.answer === 'undefined') {
       setError("Quiz data is incomplete");
       return;
     }
 
     const isCorrect = selectedAnswer === currentQuiz.answer;
+    
+    // Store the answer
+    const newAnswers = {
+      ...quizAnswers,
+      [currentQuizIndex]: isCorrect
+    };
+    setQuizAnswers(newAnswers);
+    setScore(isCorrect ? 1 : 0);
 
-    setScore(isCorrect ? 10 : 0);
-
-    if (isCorrect) {
-      unlockNodes(selectedNode, 10);
+    // Check if this was the last question
+    if (currentQuizIndex === quizzes.length - 1) {
+      // Calculate final score
+      const correctAnswers = Object.values(newAnswers).filter(Boolean).length;
+      setFinalScore(correctAnswers);
+      setShowFinalScore(true);
+      
+      // Unlock nodes if score is 8 or higher
+      if (correctAnswers >= 8) {
+        unlockNodes(selectedNode, correctAnswers);
+      }
     }
+  };
+
+  const handleNextQuiz = () => {
+    const quizzes = nodeContent[selectedNode.id]?.quizzes;
+    if (currentQuizIndex < quizzes.length - 1) {
+      setCurrentQuizIndex(currentQuizIndex + 1);
+      setScore(null);
+      setSelectedAnswer(null);
+    }
+  };
+
+  const handleRetryQuiz = () => {
+    setScore(null);
+    setSelectedAnswer(null);
+  };
+
+  const handleRetryAllQuizzes = () => {
+    setCurrentQuizIndex(0);
+    setScore(null);
+    setSelectedAnswer(null);
+    setQuizAnswers({});
+    setShowFinalScore(false);
+    setFinalScore(0);
   };
 
   const calculateNodeDistances = () => {
@@ -647,7 +709,6 @@ export default function App() {
         </div>
 
         <div className="w-1/2 relative flex items-center justify-center">
-          {/* Network visualization background */}
           <div style={{ width: "500px", height: "500px", position: "relative" }}>
             <svg width="500" height="500" style={{ opacity: 0.2 }}>
               <defs>
@@ -657,7 +718,6 @@ export default function App() {
                 </radialGradient>
               </defs>
               
-              {/* Animated connections */}
               <line x1="250" y1="250" x2="150" y2="150" stroke="#3b82f6" strokeWidth="2" opacity="0.3" />
               <line x1="250" y1="250" x2="350" y2="150" stroke="#3b82f6" strokeWidth="2" opacity="0.3" />
               <line x1="250" y1="250" x2="150" y2="350" stroke="#3b82f6" strokeWidth="2" opacity="0.3" />
@@ -667,17 +727,14 @@ export default function App() {
               <line x1="150" y1="350" x2="100" y2="400" stroke="#3b82f6" strokeWidth="1.5" opacity="0.2" />
               <line x1="350" y1="350" x2="400" y2="400" stroke="#3b82f6" strokeWidth="1.5" opacity="0.2" />
               
-              {/* Center node */}
               <circle cx="250" cy="250" r="25" fill="url(#nodeGlow)" />
               <circle cx="250" cy="250" r="18" fill="#3b82f6" />
               
-              {/* Level 1 nodes */}
               <circle cx="150" cy="150" r="18" fill="#3b82f6" opacity="0.7" />
               <circle cx="350" cy="150" r="18" fill="#3b82f6" opacity="0.7" />
               <circle cx="150" cy="350" r="18" fill="#3b82f6" opacity="0.7" />
               <circle cx="350" cy="350" r="18" fill="#3b82f6" opacity="0.7" />
               
-              {/* Level 2 nodes */}
               <circle cx="100" cy="100" r="14" fill="#64748b" opacity="0.5" />
               <circle cx="400" cy="100" r="14" fill="#64748b" opacity="0.5" />
               <circle cx="100" cy="400" r="14" fill="#64748b" opacity="0.5" />
@@ -983,20 +1040,137 @@ export default function App() {
               </p>
               
               {(() => {
-                const quiz = nodeContent[selectedNode.id]?.quiz;
-                console.log("Quiz data for node:", selectedNode.id, quiz);
+                const quizzes = nodeContent[selectedNode.id]?.quizzes;
                 
-                if (!quiz) {
+                if (!quizzes || !Array.isArray(quizzes) || quizzes.length === 0) {
                   return <p style={{ marginTop: "20px", color: "#64748b", fontSize: "13px" }}>No quiz available</p>;
                 }
+
+                const totalQuizzes = quizzes.length;
+                const answeredCount = Object.keys(quizAnswers).length;
+
+                // Show final score screen
+                if (showFinalScore) {
+                  const passed = finalScore >= 8;
+                  
+                  return (
+                    <div style={{ marginTop: "20px" }}>
+                      <div style={{
+                        padding: "24px",
+                        background: passed ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                        borderRadius: "12px",
+                        border: `1px solid ${passed ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
+                        textAlign: "center"
+                      }}>
+                        <div style={{ fontSize: "48px", marginBottom: "16px" }}>
+                          {passed ? "🎉" : "📚"}
+                        </div>
+                        <h4 style={{ 
+                          margin: "0 0 12px 0", 
+                          fontSize: "20px", 
+                          fontWeight: "600",
+                          color: passed ? "#10b981" : "#ef4444"
+                        }}>
+                          {passed ? "Excellent Work!" : "Keep Practicing"}
+                        </h4>
+                        <p style={{ 
+                          fontSize: "32px", 
+                          fontWeight: "700", 
+                          margin: "12px 0",
+                          color: "#fff"
+                        }}>
+                          {finalScore}/10
+                        </p>
+                        <p style={{ 
+                          color: "#94a3b8", 
+                          fontSize: "14px",
+                          margin: "8px 0 0 0"
+                        }}>
+                          {passed 
+                            ? "You've unlocked the next topics!" 
+                            : "Score 8 or higher to unlock next topics"}
+                        </p>
+                      </div>
+                      
+                      {!passed && (
+                        <button
+                          onClick={handleRetryAllQuizzes}
+                          style={{
+                            marginTop: "16px",
+                            width: "100%",
+                            padding: "12px 20px",
+                            background: "#3b82f6",
+                            border: "none",
+                            borderRadius: "8px",
+                            color: "#fff",
+                            cursor: "pointer",
+                            fontWeight: "600",
+                            fontSize: "14px",
+                            transition: "all 0.2s"
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = "#2563eb"}
+                          onMouseLeave={(e) => e.currentTarget.style.background = "#3b82f6"}
+                        >
+                          Retry All Questions
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
+
+                const currentQuiz = quizzes[currentQuizIndex];
                 
-                if (!quiz.question || !quiz.options || !Array.isArray(quiz.options)) {
-                  console.error("Invalid quiz structure:", quiz);
+                if (!currentQuiz.question || !currentQuiz.options || !Array.isArray(currentQuiz.options)) {
+                  console.error("Invalid quiz structure:", currentQuiz);
                   return <p style={{ marginTop: "20px", color: "#ef4444", fontSize: "13px" }}>Quiz data is malformed</p>;
                 }
                 
                 return (
                   <div style={{ marginTop: "20px" }}>
+                    {/* Quiz progress */}
+                    <div style={{ 
+                      display: "flex", 
+                      justifyContent: "space-between", 
+                      alignItems: "center",
+                      marginBottom: "12px"
+                    }}>
+                      <span style={{ color: "#94a3b8", fontSize: "12px", fontWeight: "600" }}>
+                        Question {currentQuizIndex + 1} of {totalQuizzes}
+                      </span>
+                      <span style={{ color: "#94a3b8", fontSize: "12px", fontWeight: "600" }}>
+                        Correct: {Object.values(quizAnswers).filter(Boolean).length}/{totalQuizzes}
+                      </span>
+                    </div>
+                    
+                    {/* Progress bar */}
+                    <div style={{
+                      width: "100%",
+                      height: "6px",
+                      background: "rgba(255, 255, 255, 0.1)",
+                      borderRadius: "3px",
+                      marginBottom: "16px",
+                      overflow: "hidden",
+                      display: "flex",
+                      gap: "2px"
+                    }}>
+                      {Array.from({ length: totalQuizzes }).map((_, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            flex: 1,
+                            height: "100%",
+                            background: idx < answeredCount 
+                              ? (quizAnswers[idx] ? "#10b981" : "#ef4444")
+                              : idx === currentQuizIndex 
+                                ? "#3b82f6" 
+                                : "rgba(255, 255, 255, 0.1)",
+                            transition: "background 0.3s"
+                          }}
+                        />
+                      ))}
+                    </div>
+                    
+                    {/* Quiz content */}
                     <div style={{
                       padding: "16px",
                       background: "rgba(59, 130, 246, 0.1)",
@@ -1004,9 +1178,9 @@ export default function App() {
                       border: "1px solid rgba(59, 130, 246, 0.2)"
                     }}>
                       <p style={{ fontWeight: "600", marginBottom: "14px", fontSize: "14px", color: "#e2e8f0" }}>
-                        {quiz.question}
+                        {currentQuiz.question}
                       </p>
-                      {quiz.options.map((opt, idx) => (
+                      {currentQuiz.options.map((opt, idx) => (
                         <div key={idx} style={{ marginTop: "8px" }}>
                           <label style={{
                             display: "flex",
@@ -1021,7 +1195,7 @@ export default function App() {
                           }}>
                             <input
                               type="radio"
-                              name="quiz"
+                              name={`quiz-${currentQuizIndex}`}
                               value={idx}
                               checked={selectedAnswer === idx}
                               onChange={() => setSelectedAnswer(idx)}
@@ -1033,93 +1207,127 @@ export default function App() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Action buttons */}
+                    {score === null ? (
+                      <button
+                        onClick={handleQuizSubmit}
+                        style={{
+                          marginTop: "16px",
+                          width: "100%",
+                          padding: "12px 20px",
+                          background: "#3b82f6",
+                          border: "none",
+                          borderRadius: "8px",
+                          color: "#fff",
+                          cursor: "pointer",
+                          fontWeight: "600",
+                          fontSize: "14px",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "#2563eb"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "#3b82f6"}
+                      >
+                        Submit Answer
+                      </button>
+                    ) : score === 1 ? (
+                      <div>
+                        <div style={{
+                          marginTop: "16px",
+                          padding: "16px",
+                          background: "rgba(16, 185, 129, 0.15)",
+                          borderRadius: "8px",
+                          border: "1px solid rgba(16, 185, 129, 0.3)"
+                        }}>
+                          <p style={{ color: "#10b981", fontWeight: "600", margin: 0, fontSize: "15px" }}>
+                            ✓ Correct!
+                          </p>
+                        </div>
+                        {currentQuizIndex < totalQuizzes - 1 ? (
+                          <button
+                            onClick={handleNextQuiz}
+                            style={{
+                              marginTop: "12px",
+                              width: "100%",
+                              padding: "12px 20px",
+                              background: "#3b82f6",
+                              border: "none",
+                              borderRadius: "8px",
+                              color: "#fff",
+                              cursor: "pointer",
+                              fontWeight: "600",
+                              fontSize: "14px",
+                              transition: "all 0.2s"
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "#2563eb"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "#3b82f6"}
+                          >
+                            Next Question →
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              const correctAnswers = Object.values(quizAnswers).filter(Boolean).length;
+                              setFinalScore(correctAnswers);
+                              setShowFinalScore(true);
+                            }}
+                            style={{
+                              marginTop: "12px",
+                              width: "100%",
+                              padding: "12px 20px",
+                              background: "#10b981",
+                              border: "none",
+                              borderRadius: "8px",
+                              color: "#fff",
+                              cursor: "pointer",
+                              fontWeight: "600",
+                              fontSize: "14px",
+                              transition: "all 0.2s"
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "#059669"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "#10b981"}
+                          >
+                            See Final Score
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: "16px" }}>
+                        <div style={{
+                          padding: "16px",
+                          background: "rgba(239, 68, 68, 0.15)",
+                          borderRadius: "8px",
+                          border: "1px solid rgba(239, 68, 68, 0.3)",
+                          marginBottom: "12px"
+                        }}>
+                          <p style={{ color: "#ef4444", fontWeight: "600", margin: 0, fontSize: "15px" }}>
+                            ✗ Incorrect
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleRetryQuiz}
+                          style={{
+                            padding: "12px 20px",
+                            width: "100%",
+                            background: "#ef4444",
+                            border: "none",
+                            borderRadius: "8px",
+                            color: "#fff",
+                            cursor: "pointer",
+                            fontWeight: "600",
+                            fontSize: "14px",
+                            transition: "all 0.2s"
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = "#dc2626"}
+                          onMouseLeave={(e) => e.currentTarget.style.background = "#ef4444"}
+                        >
+                          Try Again
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
-
-              {score === null ? (
-                <button
-                  onClick={handleQuizSubmit}
-                  style={{
-                    marginTop: "16px",
-                    width: "100%",
-                    padding: "12px 20px",
-                    background: "#3b82f6",
-                    border: "none",
-                    borderRadius: "8px",
-                    color: "#fff",
-                    cursor: "pointer",
-                    fontWeight: "600",
-                    fontSize: "14px",
-                    transition: "all 0.2s"
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = "#2563eb"}
-                  onMouseLeave={(e) => e.currentTarget.style.background = "#3b82f6"}
-                >
-                  Submit Answer
-                </button>
-              ) : score === 10 ? (
-                <div style={{
-                  marginTop: "16px",
-                  padding: "16px",
-                  background: "rgba(16, 185, 129, 0.15)",
-                  borderRadius: "8px",
-                  border: "1px solid rgba(16, 185, 129, 0.3)"
-                }}>
-                  <p style={{ color: "#10b981", fontWeight: "600", margin: 0, marginBottom: "6px", fontSize: "15px" }}>
-                    ✓ Correct!
-                  </p>
-                  <p style={{ color: "#6ee7b7", margin: 0, fontSize: "13px" }}>
-                    Continue to: {
-                      graphData.links
-                        .filter(l => (l.source.id || l.source) === selectedNode.id)
-                        .map(l => {
-                          const targetId = l.target.id || l.target;
-                          const targetNode = graphData.nodes.find(n => n.id === targetId);
-                          return targetNode?.label;
-                        })
-                        .filter(Boolean)
-                        .join(", ") || "next topics"
-                    }
-                  </p>
-                </div>
-              ) : (
-                <div style={{ marginTop: "16px" }}>
-                  <div style={{
-                    padding: "16px",
-                    background: "rgba(239, 68, 68, 0.15)",
-                    borderRadius: "8px",
-                    border: "1px solid rgba(239, 68, 68, 0.3)",
-                    marginBottom: "12px"
-                  }}>
-                    <p style={{ color: "#ef4444", fontWeight: "600", margin: 0, fontSize: "15px" }}>
-                      ✗ Incorrect
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setScore(null);
-                      setSelectedAnswer(null);
-                    }}
-                    style={{
-                      padding: "12px 20px",
-                      width: "100%",
-                      background: "#ef4444",
-                      border: "none",
-                      borderRadius: "8px",
-                      color: "#fff",
-                      cursor: "pointer",
-                      fontWeight: "600",
-                      fontSize: "14px",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = "#dc2626"}
-                    onMouseLeave={(e) => e.currentTarget.style.background = "#ef4444"}
-                  >
-                    Try Again
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         )}
