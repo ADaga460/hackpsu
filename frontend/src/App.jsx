@@ -317,82 +317,33 @@ export default function App() {
       setLoadingStage("structure");
       setLoadingProgress(0);
       
-      const structureResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-structure', {
+      const response = await fetch('https://sphere-backend-gsoo.onrender.com/api/fetch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: topicName })
+        body: JSON.stringify({ url: topicName })  // Backend expects "url" field
       });
-
-      if (!structureResponse.ok) {
-        throw new Error(`Structure generation failed: ${structureResponse.status}`);
+  
+      if (!response.ok) {
+        throw new Error(`Generation failed: ${response.status}`);
       }
-
-      const structureData = await structureResponse.json();
-      setLoadingProgress(100);
-
+  
+      const data = await response.json();
+      
+      // Simulate progress for UI
       setLoadingStage("content");
-      setLoadingProgress(0);
+      setLoadingProgress(50);
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      const contentResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          topic: topicName,
-          nodes: structureData.nodes 
-        })
-      });
-
-      if (!contentResponse.ok) {
-        throw new Error(`Content generation failed: ${contentResponse.status}`);
-      }
-
-      const contentData = await contentResponse.json();
-      setLoadingProgress(100);
-
       setLoadingStage("quizzes");
-      setLoadingProgress(0);
+      setLoadingProgress(75);
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      const quizzesResponse = await fetch('https://sphere-backend-gsoo.onrender.com/api/generate-quizzes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          topic: topicName,
-          nodes: structureData.nodes,
-          content: contentData.nodeContent
-        })
-      });
-
-      if (!quizzesResponse.ok) {
-        throw new Error(`Quiz generation failed: ${quizzesResponse.status}`);
-      }
-
-      const quizzesData = await quizzesResponse.json();
       setLoadingProgress(100);
-
-      console.log("Quizzes data:", quizzesData);
-
-      // Combine all data - handle both "quiz" and "quizzes" fields
-      const finalNodeContent = {};
-      Object.keys(contentData.nodeContent).forEach(nodeId => {
-        let quizData = quizzesData.nodeQuizzes[nodeId];
-        
-        // Convert single quiz object to array if needed
-        if (quizData && !Array.isArray(quizData)) {
-          quizData = [quizData];
-        }
-        
-        finalNodeContent[nodeId] = {
-          content: contentData.nodeContent[nodeId],
-          quizzes: quizData || []
-        };
-      });
-
-      console.log("Final node content:", finalNodeContent);
-
+  
       return {
-        nodes: structureData.nodes || [],
-        links: structureData.links || [],
-        nodeContent: finalNodeContent
+        nodes: data.nodes || [],
+        links: data.links || [],
+        nodeContent: data.nodeContent || {}
       };
     } catch (error) {
       console.error('Error fetching from API:', error);
