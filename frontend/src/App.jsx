@@ -704,7 +704,7 @@ export default function App() {
         overflow: "hidden",
         backdropFilter: "blur(10px)"
       }}>
-        <div style={{ padding: "16px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}>
+        <div style={{ padding: "20px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}>
           <input
             type="text"
             value={topic}
@@ -712,7 +712,7 @@ export default function App() {
             onKeyPress={(e) => e.key === 'Enter' && topic.trim() && handleStartLearning()}
             placeholder="New topic..."
             style={{
-              width: "100%",
+              width: "89%",
               padding: "9px 12px",
               borderRadius: "8px",
               border: "1px solid rgba(255, 255, 255, 0.1)",
