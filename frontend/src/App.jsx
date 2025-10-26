@@ -592,7 +592,15 @@ export default function App() {
 
   if (view === "intro") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex relative overflow-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#0f172a" }}>
+      <div style={{ 
+        minHeight: "100vh", 
+        width: "100vw",
+        display: "flex", 
+        position: "relative", 
+        overflow: "hidden",
+        fontFamily: "'Inter', system-ui, sans-serif", 
+        background: "#0f172a" 
+      }}>
         {error && <ErrorToast message={error} onClose={() => setError(null)} />}
         {loading && <LoadingProgress stage={loadingStage} progress={loadingProgress} />}
 
