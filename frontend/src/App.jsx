@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import ForceGraph2D from "react-force-graph-2d";
+import { Analytics } from "@vercel/analytics/next"
 
 // Error Toast Component
 function ErrorToast({ message, onClose }) {
@@ -127,6 +128,135 @@ function LoadingProgress({ stage, progress }) {
         This may take 30-60 seconds
       </div>
     </div>
+  );
+}
+
+// 3D Sphere Visualization Component
+function RotatingSphere() {
+  const canvasRef = useRef(null);
+  const rotationRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2 + 50;
+    const radius = 200;
+
+    const nodes = [];
+    const numNodes = 80;
+    const goldenRatio = (1 + Math.sqrt(5)) / 2;
+
+    for (let i = 0; i < numNodes; i++) {
+      const theta = 2 * Math.PI * i / goldenRatio;
+      const phi = Math.acos(1 - 2 * (i + 0.5) / numNodes);
+      
+      nodes.push({
+        x: radius * Math.sin(phi) * Math.cos(theta),
+        y: radius * Math.sin(phi) * Math.sin(theta),
+        z: radius * Math.cos(phi)
+      });
+    }
+
+    const connections = [];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const dz = nodes[i].z - nodes[j].z;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        
+        if (dist < 120) {
+          connections.push([i, j]);
+        }
+      }
+    }
+
+    let animationId;
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      rotationRef.current += 0.003;
+      
+      const rotatedNodes = nodes.map(node => {
+        const cosY = Math.cos(rotationRef.current);
+        const sinY = Math.sin(rotationRef.current);
+        
+        const x = node.x * cosY - node.z * sinY;
+        const z = node.x * sinY + node.z * cosY;
+        const y = node.y;
+        
+        const scale = 300 / (300 + z);
+        
+        return {
+          x: centerX + x * scale,
+          y: centerY + y * scale,
+          z: z,
+          scale: scale,
+          visible: x < 0
+        };
+      });
+
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+      ctx.lineWidth = 1;
+      
+      connections.forEach(([i, j]) => {
+        const node1 = rotatedNodes[i];
+        const node2 = rotatedNodes[j];
+        
+        if (node1.visible || node2.visible) {
+          const avgZ = (node1.z + node2.z) / 2;
+          const opacity = Math.max(0.1, 0.4 - avgZ / 1000);
+          
+          ctx.strokeStyle = `rgba(59, 130, 246, ${opacity})`;
+          ctx.beginPath();
+          ctx.moveTo(node1.x, node1.y);
+          ctx.lineTo(node2.x, node2.y);
+          ctx.stroke();
+        }
+      });
+
+      rotatedNodes.forEach((node) => {
+        if (node.visible) {
+          const size = 3 + node.scale * 2;
+          const opacity = Math.max(0.3, 0.7 - node.z / 500);
+          
+          const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, size * 2);
+          gradient.addColorStop(0, `rgba(59, 130, 246, ${opacity * 0.8})`);
+          gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+          
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, size * 2, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.fillStyle = `rgba(59, 130, 246, ${opacity})`;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      animationId = requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    return () => {
+      if (animationId) cancelAnimationFrame(animationId);
+    };
+  }, []);
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      width={600} 
+      height={700}
+      style={{ opacity: 0.6 }}
+    />
   );
 }
 
@@ -601,6 +731,7 @@ export default function App() {
         fontFamily: "'Inter', system-ui, sans-serif", 
         background: "#0f172a" 
       }}>
+        <Analytics/>
         {error && <ErrorToast message={error} onClose={() => setError(null)} />}
         {loading && <LoadingProgress stage={loadingStage} progress={loadingProgress} />}
 
@@ -714,9 +845,10 @@ export default function App() {
   }
 
   return (
+    
     <div style={{ height: "100vh", width: "100vw", position: "relative", display: "flex", fontFamily: "'Inter', system-ui, sans-serif", background: "#0f172a" }}>
       {error && <ErrorToast message={error} onClose={() => setError(null)} />}
-
+      <Analytics/>
       <div style={{
         width: sidebarCollapsed ? "0" : "280px",
         background: "rgba(15, 23, 42, 0.95)",
